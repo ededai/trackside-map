@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TRACKSIDE — Motion Prototype</title>
+<style>
+/* ==========================================================================
+   TRACKSIDE — GREY BOX MOTION PROTOTYPE
+   Millenia Walk, Singapore. 3-day car festival.
+   Purpose: judge CAMERA MOTION + INTERACTION only. Style is deliberately null.
+   Zero external resources. Vanilla JS + CSS 3D. Transform/opacity animation only.
+   ========================================================================== */
+
+/* --- registered custom props so dim / x-ray transitions interpolate ------ */
+@property --os { syntax: '<number>'; inherits: true; initial-value: 1; }  /* surface  (x-ray) */
+@property --oz { syntax: '<number>'; inherits: true; initial-value: 1; }  /* zone     (dim)   */
+@property --ol { syntax: '<number>'; inherits: true; initial-value: 1; }  /* leaf-local       */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #24282c;
+  font: 400 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ========================= STAGE / CAMERA ================================ */
+#stage {
+  position: fixed; inset: 0; overflow: hidden;
+  perspective: 3600px; perspective-origin: 50% 50%;
+  background:
+    radial-gradient(120% 90% at 50% 30%, #ffffff 0%, #fafafb 55%, #f2f3f4 100%);
+  touch-action: manipulation;
+}
+/* #camera is a zero-size point at the stage centre. It carries pan + zoom. */
+#camera {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* #world is the plan, offset so its centre sits on the camera point.
+   It carries only the isometric rotation (rx / rz).                        */
+#world {
+  position: absolute; left: -720px; top: -470px; width: 1440px; height: 940px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ========================= GENERIC 3D BOX ================================ */
+/* A box = plan rect (left/top/width/height) + --h extrusion.
+   Only the two camera-facing side quads are built (+y and -x); the iso
+   rotation never leaves the range where those are the visible pair.        */
+.box  { position: absolute; transform-style: preserve-3d; }
+.f, .flat, .lbl, .mark, .kart, .rc, .fade {
+  opacity: calc(var(--os, 1) * var(--oz, 1) * var(--ol, 1));
+  transition: opacity .55s cubic-bezier(.4,0,.2,1);
+}
+.f { position: absolute; display: block; background: var(--faceA, #bcc0c4); }
+.f.top { left: 0; top: 0; width: 100%; height: 100%;
+         transform: translateZ(var(--h)); background: var(--faceT, #d2d5d8); }
+.f.sy  { left: 0; top: 100%; width: 100%; height: var(--h);
+         transform-origin: 50% 0%;  transform: rotateX(90deg);
+         background: var(--faceA, #b3b7bb); }
+.f.sx  { left: 0; top: 0; width: var(--h); height: 100%;
+         transform-origin: 0% 50%;  transform: rotateY(-90deg);
+         background: var(--faceB, #c4c8cb); }
+
+/* flat = anything lying on a ground plane (slabs, roads, pens, shadows) */
+.flat { position: absolute; display: block; background: #e6e8e9; }
+.shd  { position: absolute; display: block; background: rgba(30,36,42,.055);
+        border-radius: 10px; box-shadow: 0 0 26px 14px rgba(30,36,42,.045);
+        opacity: calc(var(--os,1) * var(--oz,1)); transition: opacity .55s ease; }
+
+/* ========================= GROUND ======================================== */
+#gGround { position: absolute; inset: 0; transform-style: preserve-3d; }
+.plaza   { background: #ececee; border-radius: 4px; }
+.road    { background: #dcdee0; }
+.roadline{ background: repeating-linear-gradient(90deg,
+             rgba(255,255,255,.85) 0 26px, transparent 26px 56px); }
+.sqslab  { background: #e3e5e7; border-radius: 3px; transform: translateZ(3px); }
+
+/* ========================= MALL / PYRAMID ================================ */
+#gMall { position: absolute; inset: 0; transform-style: preserve-3d; }
+.pyr        { position: absolute; transform-style: preserve-3d; }
+.pyr .arm   { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+              transform-style: preserve-3d; transform-origin: 50% 50%; }
+.pyr .face  { position: absolute; left: 0; top: 0; width: 100%;
+              height: var(--slant); transform-origin: 50% 0%;
+              transform: rotateX(var(--tilt));
+              clip-path: polygon(0 0, 100% 0, 50% 100%);
+              background: rgba(176,181,186,.42);
+              border-top: 1px solid rgba(120,127,134,.5);
+              opacity: calc(var(--os,1) * var(--oz,1));
+              transition: opacity .55s ease; }
+.atrium-frame { background: #c9cdd0; }
+
+/* ========================= LABELS (billboarded) ========================== */
+/* Counter-rotate the world rotation so labels always face the screen, and
+   counter-scale the camera zoom so they never overflow their pill.         */
+.lbl {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  transform-style: preserve-3d;
+  transform: translateZ(var(--lz, 4px))
+             rotateZ(var(--crz, 38deg)) rotateX(var(--crx, -58deg))
+             scale(calc(1 / var(--cs, .6)));
+  pointer-events: none;
+}
+.lbl > span {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  font-weight: 600; color: #4a5157;
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(0,0,0,.07);
+  border-radius: 999px; padding: 3px 8px;
+}
+.lbl.sm  > span { font-size: 8.5px; padding: 2px 6px; letter-spacing: .06em;
+                  color: #6a7278; font-weight: 500; }
+.lbl.det { opacity: 0; transition: opacity .45s ease; }
+body.z-near .lbl.det { opacity: calc(var(--os,1) * var(--oz,1)); }
+
+/* ========================= MICRO-ANIMATIONS ============================== */
+/* All keyframes are transform / opacity only. */
+@keyframes lap      { 0% { offset-distance: 0%; } 100% { offset-distance: 100%; } }
+@keyframes breatheP { 0%,100% { transform: translateZ(var(--gz,1px)) scale(1); opacity: .55; }
+                      50%     { transform: translateZ(var(--gz,1px)) scale(1.06); opacity: 1; } }
+@keyframes crowd    { 0%,100% { transform: translate(0,0) scale(1); }
+                      50%     { transform: translate(5px,-4px) scale(1.25); } }
+@keyframes blink    { 0%, 88%, 100% { opacity: .18; } 92% { opacity: 1; } }
+@keyframes screenPulse { 0%,100% { opacity: .30; transform: scale(1); }
+                         50%     { opacity: .80; transform: scale(1.015); } }
+
+/* --- Dorifto karts + trails --- */
+.kartset { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.kart {
+  position: absolute; left: 0; top: 0; width: 17px; height: 9px;
+  margin: -4.5px 0 0 -8.5px; border-radius: 3px;
+  background: var(--accent, #7d848a);
+  offset-path: var(--path);
+  offset-rotate: auto var(--drift, 22deg);   /* yaw held ahead of travel = drift */
+  animation: lap var(--dur, 9s) linear infinite;
+  animation-delay: var(--dly, 0s);
+  will-change: transform;
+}
+.kart.t1 { --ol: .40; transform-box: fill-box; }
+.kart.t2 { --ol: .22; }
+.kart.t3 { --ol: .11; }
+.kart.t4 { --ol: 0;  }                      /* revealed only when amplified  */
+.kart.lead { --ol: 1; background: var(--accent, #5d656c); filter: brightness(.8) saturate(1.15); }
+.kart.lead::after {
+  content: ''; position: absolute; inset: 1px 2px auto 2px; height: 3px;
+  border-radius: 2px; background: rgba(255,255,255,.5);
+}
+.zone.is-active .kart          { --dur: 6.4s; }
+.zone.is-active .kart.t1       { --ol: .55; }
+.zone.is-active .kart.t2       { --ol: .36; }
+.zone.is-active .kart.t3       { --ol: .22; }
+.zone.is-active .kart.t4       { --ol: .11; }
+
+/* --- RC circuit cars --- */
+.rc {
+  position: absolute; left: 0; top: 0; width: 11px; height: 6px;
+  margin: -3px 0 0 -5.5px; border-radius: 2px; background: var(--accent, #767d84);
+  offset-path: var(--path); offset-rotate: auto;
+  animation: lap var(--dur, 5.2s) linear infinite;
+  animation-delay: var(--dly, 0s);
+  will-change: transform;
+}
+.zone.is-active .rc { --dur: 3.9s; }
+
+/* --- people dots --- */
+.dotwrap { position: absolute; width: 0; height: 0;
+           opacity: calc(var(--os,1) * var(--oz,1)); transition: opacity .55s ease; }
+.dot     { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+           border-radius: 50%; background: #9aa1a7;
+           animation: crowd var(--dur, 9s) ease-in-out infinite;
+           animation-delay: var(--dly, 0s); will-change: transform; }
+
+/* --- big screen glow --- */
+.glowpanel { position: absolute; inset: 0; background: var(--accent, #888);
+             animation: screenPulse 3.4s ease-in-out infinite; }
+.zone.is-active .glowpanel { animation-duration: 1.9s; }
+
+/* --- stall blink --- */
+.blink { position: absolute; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+         border-radius: 50%; background: var(--accent, #888);
+         animation: blink var(--dur, 7s) linear infinite;
+         animation-delay: var(--dly, 0s); }
+
+/* ========================= ZONE SELECTION GLOW =========================== */
+.zone { position: absolute; transform-style: preserve-3d; }
+.zglow { position: absolute; left: -14px; top: -14px; right: -14px; bottom: -14px;
+         border: 1.5px solid var(--accent); border-radius: 8px;
+         box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent),
+                     0 0 34px 6px color-mix(in srgb, var(--accent) 26%, transparent);
+         opacity: 0; transition: opacity .5s ease; pointer-events: none;
+         transform: translateZ(2px); }
+.zone.is-active .zglow { opacity: .95; }
+svg.zglowsvg { position: absolute; left: 0; top: 0; overflow: visible;
+               opacity: 0; transition: opacity .5s ease; transform: translateZ(2px); }
+.zone.is-active svg.zglowsvg { opacity: .95; }
+
+/* ========================= B1 =========================================== */
+/* NOTE: never put `opacity` on a preserve-3d group — it becomes a grouping
+   element and flattens every child's 3D. Both the x-ray fade and the basement
+   reveal are driven through the inherited --os number instead, applied on the
+   flat leaf quads, so the extrusions survive the transition.               */
+#gSurface { --os: 1; transition: --os .6s cubic-bezier(.4,0,.2,1); }
+#gB1 { position: absolute; inset: 0; transform-style: preserve-3d;
+       transform: translateZ(-95px);
+       --os: 0; transition: --os .6s cubic-bezier(.4,0,.2,1); }
+body.xray #gB1      { --os: 1; }
+body.xray #gSurface { --os: .12; }
+.b1slab  { background: #e0e2e4; border-radius: 3px; }
+.parkgrid{ background:
+   repeating-linear-gradient(90deg, rgba(140,148,156,.20) 0 1px, transparent 1px 46px),
+   repeating-linear-gradient(0deg,  rgba(140,148,156,.14) 0 1px, transparent 1px 92px); }
+.driftfloor { background: #d7dadd; border-radius: 3px; }
+.mark { position: absolute; display: block; }
+.mcpark { background: repeating-linear-gradient(45deg,
+            rgba(150,156,162,.34) 0 4px, transparent 4px 9px); border-radius: 2px; }
+
+/* ==========================================================================
+   HUD — PHONE-FIRST
+   --------------------------------------------------------------------------
+   PRIMARY layout = portrait phone (attendees scan a QR at the mall).
+   Base CSS below IS the phone layout: compact title pill at the top, a
+   horizontally scrollable chip bar pinned to the bottom in thumb reach with
+   46px minimum tap targets, and an info card that slides UP from the bottom
+   and sits directly above the chip bar.
+   SECONDARY layout = desktop left panel, in the min-width media query.
+   ========================================================================== */
+#hud { display: contents; }
+
+/* ---- compact title at the top ---- */
+#brand {
+  position: fixed; left: 50%; top: 10px; transform: translateX(-50%);
+  z-index: 30; text-align: center; max-width: calc(100vw - 24px);
+  background: rgba(255,255,255,.92);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,.08); border-radius: 999px;
+  padding: 7px 16px;
+  box-shadow: 0 8px 26px -18px rgba(20,26,32,.5);
+}
+#brand h1 { margin: 0; font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+            font-weight: 700; color: #1d2226;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#brand .sub { display: none; margin: 2px 0 0; font-size: 10.5px; color: #8b9299;
+              letter-spacing: .03em; }
+
+/* ---- bottom dock: chip bar + tour button ---- */
+#dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: rgba(255,255,255,.93);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0,0,0,.08); border-radius: 16px 16px 0 0;
+  padding: 9px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -12px 34px -22px rgba(20,26,32,.55);
+}
+#chips {
+  display: flex; flex-direction: row; gap: 7px; list-style: none; margin: 0;
+  padding: 0 2px 3px; overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+#chips::-webkit-scrollbar { display: none; }
+#chips > li { flex: 0 0 auto; scroll-snap-align: center; }
+.chip {
+  display: flex; align-items: center; gap: 9px; min-height: 46px; max-width: 62vw;
+  text-align: left; font: inherit; color: #2c3237; cursor: pointer;
+  background: rgba(0,0,0,.025); border: 1px solid rgba(0,0,0,.10); border-radius: 10px;
+  padding: 8px 13px; -webkit-tap-highlight-color: transparent;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.chip:active { transform: scale(.97); }
+.chip.on { background: #24282c; border-color: #24282c; color: #fff; }
+.chip .swatch { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%;
+                background: var(--accent, #b9bec3);
+                box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.chip .txt { min-width: 0; }
+.chip .nm  { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.25;
+             white-space: nowrap; }
+.chip .ds  { display: none; font-size: 10px; color: #868d94; line-height: 1.35;
+             margin-top: 1px; overflow-wrap: anywhere; }
+.chip.on .ds { color: #b9c0c6; }
+
+#tourbtn {
+  margin-top: 8px; width: 100%; min-height: 44px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: #14181c; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: #eceeef; border: 1px solid rgba(0,0,0,.14); border-radius: 10px;
+  padding: 10px; transition: background .18s ease, transform .18s ease;
+}
+#tourbtn:active { transform: scale(.99); }
+#tourbtn.running { background: #24282c; color: #fff; border-color: #24282c; }
+#hint { display: none; margin-top: 8px; font-size: 9.5px; letter-spacing: .1em;
+        text-transform: uppercase; color: #a7aeb4; text-align: center; }
+
+/* ---- info card: slides up from the bottom, above the chip bar ---- */
+#card {
+  position: fixed; left: 10px; right: 10px; z-index: 29;
+  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255,255,255,.95);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,.08); border-radius: 14px; padding: 13px 14px 12px;
+  box-shadow: 0 16px 40px -22px rgba(20,26,32,.6);
+  opacity: 0; transform: translateY(28px); pointer-events: none;
+  transition: opacity .38s cubic-bezier(.4,0,.2,1), transform .38s cubic-bezier(.4,0,.2,1);
+}
+#card.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+#card .kicker { display: flex; align-items: center; gap: 7px; font-size: 9.5px;
+                letter-spacing: .12em; text-transform: uppercase; color: #949ba1; }
+#card .kicker i { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
+                  background: var(--accent, #b9bec3); }
+#card h2 { margin: 6px 0 8px; font-size: 16px; line-height: 1.22; font-weight: 700; color: #191d21; }
+#card ul { margin: 0; padding: 0 0 0 15px; }
+#card li { font-size: 12.5px; line-height: 1.45; color: #5c646b; margin-bottom: 3px;
+           overflow-wrap: anywhere; }
+#card .cta { margin-top: 11px; display: flex; gap: 8px; }
+#card .cta button { flex: 1 1 0; min-height: 44px; font: inherit; font-size: 12.5px;
+                    font-weight: 600; padding: 8px 6px; border-radius: 9px; cursor: pointer;
+                    border: 1px solid rgba(0,0,0,.14); background: #f2f3f4; color: #2b3136;
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                    -webkit-tap-highlight-color: transparent; }
+#card .cta button.p { background: #24282c; color: #fff; border-color: #24282c; }
+#card .ph { margin-top: 8px; font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+            color: #b3b9be; text-align: center; }
+
+/* ---- landscape phone: keep the dock to one row ---- */
+@media (max-height: 520px) and (max-width: 899px) {
+  #dock { padding-top: 7px; }
+  #tourbtn { position: absolute; right: 10px; top: -46px; width: auto; margin: 0;
+             min-height: 36px; font-size: 11px; padding: 6px 12px;
+             background: rgba(255,255,255,.93); border-radius: 999px; }
+  #card { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
+  #card li { font-size: 11.5px; }
+  #card .cta button { min-height: 38px; }
+}
+
+/* ==========================================================================
+   SECONDARY LAYOUT — desktop / large viewport: left panel + bottom-right card
+   ========================================================================== */
+@media (min-width: 900px) and (min-height: 560px) {
+  #hud {
+    display: block; position: fixed; left: 22px; top: 22px; width: 264px; z-index: 30;
+    background: rgba(255,255,255,.92);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border: 1px solid rgba(0,0,0,.08); border-radius: 12px;
+    padding: 15px 15px 13px;
+    box-shadow: 0 10px 34px -18px rgba(20,26,32,.5);
+  }
+  #brand, #dock {
+    position: static; transform: none; max-width: none;
+    background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  #brand { text-align: left; margin-bottom: 12px; }
+  #brand h1 { font-size: 13px; letter-spacing: .14em; white-space: normal; }
+  #brand .sub { display: block; }
+  #chips { flex-direction: column; gap: 5px; overflow: visible; padding: 0; }
+  #chips > li { width: 100%; }
+  .chip { width: 100%; max-width: none; min-height: 0; align-items: flex-start;
+          padding: 7px 9px; background: transparent; border-color: transparent;
+          border-radius: 8px; }
+  .chip:hover { background: rgba(0,0,0,.035); }
+  .chip.on { background: rgba(0,0,0,.055); border-color: rgba(0,0,0,.12); color: #2c3237; }
+  .chip .swatch { width: 9px; height: 9px; margin-top: 4px; }
+  .chip .nm { font-size: 12px; white-space: normal; }
+  .chip .ds { display: block; }
+  .chip.on .ds { color: #868d94; }
+  #tourbtn { margin-top: 11px; min-height: 0; font-size: 11.5px; letter-spacing: .04em;
+             padding: 9px 10px; border-radius: 8px; }
+  #tourbtn:hover { background: #e4e7e9; }
+  #hint { display: block; }
+  #card { left: auto; right: 22px; bottom: 22px; width: 290px; border-radius: 12px;
+          padding: 14px 15px 13px; }
+  #card h2 { font-size: 15px; }
+  #card li { font-size: 11.5px; }
+  #card .cta button { min-height: 0; font-size: 11px; border-radius: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kart, .rc, .dot, .glowpanel, .blink { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="camera">
+    <div id="world">
+      <!-- everything above ground level -->
+      <div id="gSurface" style="position:absolute;inset:0;transform-style:preserve-3d">
+        <div id="gGround"></div>
+        <div id="gMall"></div>
+        <div id="zSquare"    class="zone" style="left:130px;top:520px;width:1180px;height:200px"></div>
+        <div id="zGalleria"  class="zone" style="left:110px;top:180px;width:360px;height:280px"></div>
+      </div>
+      <!-- basement, revealed by x-ray -->
+      <div id="gB1">
+        <div id="zDrift"  class="zone" style="left:780px;top:180px;width:450px;height:460px"></div>
+        <div id="zMarket" class="zone" style="left:380px;top:300px;width:360px;height:330px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<aside id="hud">
+  <div id="brand">
+    <h1>TRACKSIDE — Motion Prototype</h1>
+    <p class="sub">grey box: judging motion only</p>
+  </div>
+  <div id="dock">
+    <ul id="chips"></ul>
+    <button id="tourbtn" type="button">▶ Play full tour</button>
+    <div id="hint">keys 1–5</div>
+  </div>
+</aside>
+
+<div id="card">
+  <div class="kicker"><i></i><span id="cardKick">Zone</span></div>
+  <h2 id="cardTitle">—</h2>
+  <ul id="cardList"></ul>
+  <div class="cta">
+    <button class="p" type="button">Book</button>
+    <button type="button">More info</button>
+  </div>
+  <div class="ph">placeholder — not wired</div>
+</div>
+
+<script>
+"use strict";
+(function () {
+
+/* ==========================================================================
+   1.  CAMERA KEYFRAME TABLE
+   --------------------------------------------------------------------------
+   This table IS the future Remotion timeline. One row per legend chip.
+
+     tx, ty : screen-space pan in px, applied AFTER zoom (translate then scale)
+     scale  : zoom multiplier, later multiplied by the responsive `fit` factor
+              and, for non-overview rows, by the motion-profile zoom boost
+              (phone 1.62 x touch 1.30; desktop 1.00)
+     rz     : world rotateZ  (base -38deg; each pose swings 6-12deg off base)
+     rx     : world rotateX  (base  58deg; each pose tilts up to 4deg off base)
+
+   Flight duration comes from the motion profile, not from the row:
+     touch/phone 1100ms, desktop 1600ms, easeInOutCubic, interruptible.
+   The rows themselves stay device-agnostic so the tour exports cleanly to a
+   Remotion timeline (fit = 1, zoom boost = 1, bias = 0 for a render).
+
+   tx/ty were derived from a focus point on the 1440x940 plan (world centre
+   720,470) through that row's own rz/rx projection, so every pose lands its
+   subject on the screen centre before UI bias is applied.
+
+     screenX = ( dx*cos(rz) - dy*sin(rz) )
+     screenY = ( dx*sin(rz) + dy*cos(rz) )*cos(rx) - dz*sin(rx)
+     tx = -scale * screenX ,  ty = -scale * screenY
+   ========================================================================== */
+var KEYFRAMES = [
+  { id:'overview', key:'1', accent:'#8b9298',
+    name:'Overview',
+    desc:'whole site',
+    kick:'Site',
+    title:'TRACKSIDE at Millenia Walk',
+    bullets:['3 days, 4 activation zones, two levels',
+             'Monument Square outdoor strip + South Galleria L1',
+             'B1 car park converted: drift course + vendor market'],
+    /* focus (720,470) dz +45  */
+    tx:    0, ty:  24, scale: 0.62, rz: -38, rx: 58, xray:false, zone:null },
+
+  { id:'square', key:'2', accent:'#d9564a',
+    name:'Monument Square',
+    desc:'Curated cars · Big screen · RC try-and-buy',
+    kick:'Outdoor · Ground level',
+    title:'Monument Square',
+    bullets:['Curated car display, two rows down the 280m strip',
+             'Big screen at the west end for live feed and replays',
+             'RC try-and-buy pen at the boulevard end'],
+    /* focus (720,620) dz 0    */
+    tx: -124, ty: -70, scale: 1.15, rz: -46, rx: 54, xray:false, zone:'zSquare' },
+
+  { id:'galleria', key:'3', accent:'#3f7fd6',
+    name:'South Galleria (L1)',
+    desc:'MiniMe FPV racing · Diecast showcase',
+    kick:'Indoor · Level 1 atrium',
+    title:'South Galleria',
+    bullets:['4x MiniMe FPV racing rigs with driver screens',
+             'Miniature RC circuit running heats all day',
+             'Diecast showcase and trader stalls around the atrium'],
+    /* focus (290,320) dz +20  */
+    tx:  606, ty: -27, scale: 1.35, rz: -29, rx: 61, xray:false, zone:'zGalleria' },
+
+  { id:'drift', key:'4', accent:'#efa227',
+    name:'B1 — Dorifto Drift Karts',
+    desc:'L-shaped course · Lift Lobby A entry',
+    kick:'Basement 1 · Drift',
+    title:'Dorifto Zone',
+    bullets:['L-shaped course laid into the existing car park bays',
+             'Three karts running timed drift laps',
+             'Entry at Lift Lobby A, spectators on the motorcycle park edge'],
+    /* focus (1005,410) dz -95 */
+    tx: -172, ty:  87, scale: 1.25, rz: -50, rx: 55, xray:true,  zone:'zDrift' },
+
+  { id:'market', key:'5', accent:'#34a06a',
+    name:'B1 — RC & Diecast Market',
+    desc:'Sellers · Bring-and-buy',
+    kick:'Basement 1 · Market',
+    title:'Vendor Market',
+    bullets:['RC sellers and diecast traders in a stall grid',
+             'Bring-and-buy tables along the aisle',
+             'Sits between the lift core and the drift course'],
+    /* focus (560,465) dz -95  */
+    tx:  180, ty:-159, scale: 1.30, rz: -32, rx: 60, xray:true,  zone:'zMarket' }
+];
+
+/* ==========================================================================
+   2.  DOM HELPERS
+   ========================================================================== */
+var world  = document.getElementById('world');
+var camera = document.getElementById('camera');
+var stage  = document.getElementById('stage');
+
+function el(cls, style, parent) {
+  var d = document.createElement('div');
+  if (cls)   d.className = cls;
+  if (style) d.setAttribute('style', style);
+  (parent || world).appendChild(d);
+  return d;
+}
+function rect(parent, cls, x, y, w, h, extra) {
+  return el('flat ' + (cls || ''),
+    'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;' + (extra || ''),
+    parent);
+}
+/* 3D box: plan rect + extrusion height z */
+function box(parent, x, y, w, h, z, extra) {
+  var b = el('box', 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h +
+                    'px;--h:' + z + 'px;' + (extra || ''), parent);
+  b.innerHTML = '<i class="f top"></i><i class="f sy"></i><i class="f sx"></i>';
+  return b;
+}
+/* soft ground shadow for a footprint */
+function shadow(parent, x, y, w, h) {
+  return el('shd', 'left:' + (x - 10) + 'px;top:' + (y + 12) + 'px;width:' + (w + 16) +
+                   'px;height:' + (h + 12) + 'px;transform:translateZ(0.4px)', parent);
+}
+/* billboarded label anchored at a plan point */
+function label(parent, x, y, z, text, cls) {
+  var d = el('lbl ' + (cls || ''),
+    'left:' + x + 'px;top:' + y + 'px;--lz:' + z + 'px', parent);
+  d.innerHTML = '<span></span>';
+  d.firstChild.textContent = text;
+  return d;
+}
+function svgNS(tag, attrs, parent) {
+  var n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+
+/* ==========================================================================
+   3.  BUILD THE WORLD
+   ========================================================================== */
+var gGround   = document.getElementById('gGround');
+var gMall     = document.getElementById('gMall');
+var gB1       = document.getElementById('gB1');
+var zSquare   = document.getElementById('zSquare');
+var zGalleria = document.getElementById('zGalleria');
+var zDrift    = document.getElementById('zDrift');
+var zMarket   = document.getElementById('zMarket');
+
+/* ---- 3.1 ground plaza + Raffles Boulevard ------------------------------- */
+rect(gGround, 'plaza', 40, 120, 1360, 720);
+rect(gGround, 'road',  40, 848, 1360, 62,  'transform:translateZ(1px)');
+rect(gGround, 'roadline', 40, 877, 1360, 3, 'transform:translateZ(2px)');
+label(gGround, 720, 879, 3, 'Raffles Boulevard', 'sm');
+
+/* ---- 3.2 Monument Square (zone) ---------------------------------------- */
+zSquare.style.setProperty('--accent', '#d9564a');
+rect(zSquare, 'sqslab', 0, 0, 1180, 200);
+el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zSquare);
+label(zSquare, 860, 232, 30, 'Monument Square');
+label(zSquare, 590, 232, 6, '280m outdoor strip', 'sm det');
+
+/* big screen at the west end: wall slab + emissive face standing in x = const */
+(function () {
+  var sx = 22, sy = 30, sw = 22, sh = 140;         /* plan footprint of the screen wall */
+  shadow(zSquare, sx, sy, sw, sh);
+  box(zSquare, sx, sy, sw, sh, 100);
+  /* screen face: same construction as a box's -x side quad, held 2px proud */
+  var p = el('fade', 'position:absolute;left:' + (sx - 2) + 'px;top:' + (sy + 10) +
+                     'px;width:78px;height:' + (sh - 20) + 'px;' +
+                     'transform-origin:0% 50%;transform:rotateY(-90deg) translateZ(0px);' +
+                     'transform-style:preserve-3d', zSquare);
+  p.style.setProperty('--accent', '#d9564a');
+  el('glowpanel', '', p);
+  label(zSquare, sx + 11, sy - 26, 108, 'Big screen', 'sm det');
+})();
+
+/* curated car display: two rows of small blocks */
+(function () {
+  var y1 = 42, y2 = 122, x0 = 150, step = 76, n = 13;
+  for (var i = 0; i < n; i++) {
+    var x = x0 + i * step;
+    box(zSquare, x, y1, 46, 26, 13);
+    box(zSquare, x, y2, 46, 26, 13);
+  }
+  label(zSquare, x0 + (n * step) / 2 - 20, 96, 18, 'Curated cars', 'sm det');
+})();
+
+/* RC try-and-buy pen at the east end */
+(function () {
+  var px = 1058, py = 26, pw = 108, ph = 150;
+  rect(zSquare, '', px, py, pw, ph, 'background:#dcdee0;transform:translateZ(4px);border-radius:3px');
+  /* low fence: 4 thin boxes */
+  box(zSquare, px, py, pw, 5, 14);
+  box(zSquare, px, py + ph - 5, pw, 5, 14);
+  box(zSquare, px, py, 5, ph, 14);
+  box(zSquare, px + pw - 5, py, 5, ph, 14);
+  /* tiny rc cars inside on a small oval */
+  var pathD = 'M ' + (px + 22) + ' ' + (py + 75) + ' A 32 46 0 1 0 ' + (px + 86) + ' ' + (py + 75) +
+              ' A 32 46 0 1 0 ' + (px + 22) + ' ' + (py + 75) + ' Z';
+  for (var i = 0; i < 3; i++) {
+    el('rc', '--path:path("' + pathD + '");--dur:6.4s;--dly:' + (-i * 2.13) +
+             's;transform:translateZ(6px);width:9px;height:5px;margin:-2.5px 0 0 -4.5px', zSquare);
+  }
+  label(zSquare, px + pw / 2, py - 24, 18, 'RC try-and-buy', 'sm det');
+})();
+
+/* crowd dots across the square */
+(function () {
+  var seed = 7;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for (var i = 0; i < 34; i++) {
+    var x = 120 + rnd() * 920, y = 12 + rnd() * 176;
+    var w = el('dotwrap', 'left:' + x + 'px;top:' + y + 'px;transform:translateZ(5px)', zSquare);
+    el('dot', '--dur:' + (7 + rnd() * 6).toFixed(1) + 's;--dly:' + (-rnd() * 8).toFixed(1) + 's', w);
+  }
+})();
+
+/* ---- 3.3 mall bar + Great Hall pyramid --------------------------------- */
+var MALL_H = 110;
+shadow(gMall, 110, 180, 1220, 280);
+box(gMall, 470, 180, 150, 280, MALL_H);                 /* link section        */
+box(gMall, 620, 180, 260, 280, MALL_H);                 /* Great Hall section  */
+box(gMall, 880, 180, 450, 280, MALL_H);                 /* north section       */
+label(gMall, 1105, 320, MALL_H + 16, 'Millenia Walk');
+
+/* Great Hall pyramid: 4 folded triangular faces on the roof */
+(function () {
+  var S = 240, H = 130;
+  var slant = Math.sqrt(H * H + (S / 2) * (S / 2));             /* 176.9 */
+  var tilt  = Math.atan2(H, S / 2) * 180 / Math.PI;             /* 47.3deg */
+  var cx = 750, cy = 320;
+  var p = el('pyr', 'left:' + (cx - S / 2) + 'px;top:' + (cy - S / 2) + 'px;width:' + S +
+                    'px;height:' + S + 'px;transform:translateZ(' + MALL_H + 'px)', gMall);
+  for (var i = 0; i < 4; i++) {
+    var arm = el('arm', 'transform:rotateZ(' + (i * 90) + 'deg)', p);
+    el('face', '--slant:' + slant.toFixed(1) + 'px;--tilt:' + tilt.toFixed(1) + 'deg', arm);
+  }
+  label(gMall, cx, cy, MALL_H + H + 18, 'Great Hall', 'sm det');
+})();
+
+/* ---- 3.4 South Galleria (zone, open atrium cutaway) --------------------- */
+zGalleria.style.setProperty('--accent', '#3f7fd6');
+rect(zGalleria, '', 0, 0, 360, 280, 'background:#e1e3e5;border-radius:3px');
+el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zGalleria);
+/* atrium void frame at roof height = reads as an indoor space with the roof cut away */
+box(zGalleria, 0, 0, 360, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 0, 272, 360, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 0, 0, 8, 280, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 352, 0, 8, 280, 4, 'transform:translateZ(' + MALL_H + 'px)');
+/* low perimeter walls */
+box(zGalleria, 0, 0, 360, 7, 26);
+box(zGalleria, 0, 273, 360, 7, 26);
+box(zGalleria, 0, 0, 7, 280, 26);
+box(zGalleria, 353, 0, 7, 280, 26);
+label(zGalleria, 180, -34, MALL_H + 26, 'South Galleria (L1)');
+
+/* 4 MiniMe FPV racing rigs, each with a small upright screen */
+(function () {
+  for (var i = 0; i < 4; i++) {
+    var x = 42 + i * 76, y = 34;
+    box(zGalleria, x, y, 52, 40, 22);
+    /* driver screen: standing quad hinged on the rig's south edge */
+    var s = el('fade', 'position:absolute;left:' + (x + 4) + 'px;top:' + (y + 40) + 'px;width:44px;height:26px;' +
+                   'transform-origin:50% 0%;transform:rotateX(90deg);transform-style:preserve-3d', zGalleria);
+    s.style.setProperty('--accent', '#3f7fd6');
+    el('glowpanel', '', s);
+  }
+  label(zGalleria, 180, 12, 40, 'MiniMe FPV racing', 'sm det');
+})();
+
+/* miniature RC circuit oval */
+(function () {
+  var cx = 180, cy = 192, rx = 106, ry = 52;
+  var d = 'M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx + rx) + ' ' + cy +
+          ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx - rx) + ' ' + cy + ' Z';
+  var svg = svgNS('svg', { width: 360, height: 280, viewBox: '0 0 360 280',
+    style: 'position:absolute;left:0;top:0;transform:translateZ(3px)', class: 'flat' }, zGalleria);
+  svg.style.background = 'none';
+  svgNS('path', { d: d, fill: 'none', stroke: '#c8cbce', 'stroke-width': 22 }, svg);
+  svgNS('path', { d: d, fill: 'none', stroke: '#dfe1e3', 'stroke-width': 2,
+                  'stroke-dasharray': '8 8' }, svg);
+  for (var i = 0; i < 3; i++) {
+    el('rc', '--path:path("' + d + '");--dur:5.2s;--dly:' + (-i * 1.73).toFixed(2) +
+             's;transform:translateZ(6px)', zGalleria);
+  }
+})();
+
+/* diecast market stalls along the east side */
+(function () {
+  for (var r = 0; r < 4; r++) {
+    var x = 300, y = 30 + r * 58;
+    box(zGalleria, x, y, 44, 40, 20);
+    var b = el('fade', 'position:absolute;left:' + (x + 22) + 'px;top:' + (y + 20) +
+                   'px;transform:translateZ(24px);width:0;height:0', zGalleria);
+    b.style.setProperty('--accent', '#3f7fd6');
+    el('blink', '--dur:' + (6 + r * 1.7).toFixed(1) + 's;--dly:' + (-r * 1.9).toFixed(1) + 's', b);
+  }
+  label(zGalleria, 322, 264, 26, 'Diecast showcase', 'sm det');
+})();
+
+/* crowd dots in the galleria */
+(function () {
+  var seed = 31;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for (var i = 0; i < 14; i++) {
+    var w = el('dotwrap', 'left:' + (30 + rnd() * 260) + 'px;top:' + (100 + rnd() * 160) +
+                          'px;transform:translateZ(5px)', zGalleria);
+    el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
+  }
+})();
+
+/* ---- 3.5 B1 slab, parking grid ----------------------------------------- */
+rect(gB1, 'b1slab',  60, 140, 1320, 660);
+rect(gB1, 'parkgrid', 74, 154, 1292, 632, 'transform:translateZ(1px)');
+label(gB1, 200, 176, 6, 'B1 Car Park', 'sm');
+
+/* ---- 3.6 Dorifto Zone (L-shaped, zone) --------------------------------- */
+zDrift.style.setProperty('--accent', '#efa227');
+/* the L: vertical arm (local x 230-450, y 0-290) + horizontal arm (x 0-450, y 290-460) */
+rect(zDrift, 'driftfloor', 230,   0, 220, 292, 'transform:translateZ(2px)');
+rect(zDrift, 'driftfloor',   0, 288, 450, 172, 'transform:translateZ(2px)');
+
+/* internal loop road, traced by an SVG stroke and reused as the kart path */
+var DRIFT_PATH =
+  'M 324 40 L 396 40 Q 420 40 420 64 L 420 406 Q 420 430 396 430 ' +
+  'L 54 430 Q 30 430 30 406 L 30 344 Q 30 320 54 320 ' +
+  'L 276 320 Q 300 320 300 296 L 300 64 Q 300 40 324 40 Z';
+(function () {
+  var svg = svgNS('svg', { width: 450, height: 460, viewBox: '0 0 450 460',
+    style: 'position:absolute;left:0;top:0;transform:translateZ(3px)', class: 'flat' }, zDrift);
+  svgNS('path', { d: DRIFT_PATH, fill: 'none', stroke: '#c0c3c6', 'stroke-width': 40,
+                  'stroke-linejoin': 'round' }, svg);
+  svgNS('path', { d: DRIFT_PATH, fill: 'none', stroke: '#d8dadc', 'stroke-width': 1.5,
+                  'stroke-dasharray': '10 12' }, svg);
+
+  /* selection glow traced on the L outline */
+  var gsvg = svgNS('svg', { width: 450, height: 460, viewBox: '0 0 450 460',
+    class: 'zglowsvg' }, zDrift);
+  svgNS('path', { d: 'M 230 -8 L 458 -8 L 458 468 L -8 468 L -8 280 L 230 280 Z',
+    fill: 'none', stroke: '#efa227', 'stroke-width': 2.5, 'stroke-linejoin': 'round',
+    opacity: '.9' }, gsvg);
+
+  /* 3 karts, each with 4 trail ghosts. Negative delays: the lead kart carries
+     the largest negative delay so its ghosts sit behind it on the path.     */
+  var kartPhase = [0, 3.0, 6.0];            /* seconds apart on a 9s loop */
+  var ghost     = [0, .10, .20, .30];       /* trail stagger, seconds     */
+  var cls       = ['lead', 't1', 't2', 't3'];
+  for (var k = 0; k < 3; k++) {
+    var set = el('kartset', '', zDrift);
+    /* extra ghost that only appears when the zone is selected */
+    for (var g = 3; g >= 0; g--) {
+      el('kart ' + cls[g],
+        '--path:path("' + DRIFT_PATH + '");--dly:' + (-(kartPhase[k] + 1.2 - ghost[g])).toFixed(2) +
+        's;--drift:' + (18 + k * 4) + 'deg', set);
+    }
+    el('kart t4',
+      '--path:path("' + DRIFT_PATH + '");--dly:' + (-(kartPhase[k] + 1.2 - .40)).toFixed(2) +
+      's;--drift:' + (18 + k * 4) + 'deg', set);
+  }
+})();
+
+/* Lift Lobby A marker, east side of the L */
+(function () {
+  box(zDrift, 462, 68, 76, 84, 34);
+  label(zDrift, 500, 46, 40, 'Lift Lobby A', 'sm det');
+})();
+/* motorcycle park nibble on the L's west edge */
+rect(zDrift, 'mcpark', -92, 358, 86, 96, 'transform:translateZ(3px)');
+label(zDrift, -49, 470, 6, 'Motorcycle park', 'sm det');
+label(zDrift, 300, -42, 8, 'Dorifto Zone');
+
+/* ---- 3.7 Vendor Market (zone) ------------------------------------------ */
+zMarket.style.setProperty('--accent', '#34a06a');
+rect(zMarket, '', 0, 0, 360, 330, 'background:#d9dcde;border-radius:3px;transform:translateZ(2px)');
+el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zMarket);
+(function () {
+  var n = 0;
+  for (var r = 0; r < 4; r++) {
+    for (var c = 0; c < 4; c++) {
+      if (r === 2 && c > 1) continue;                       /* aisle break */
+      var x = 22 + c * 84, y = 20 + r * 78;
+      box(zMarket, x, y, 62, 46, 24);
+      var b = el('fade', 'position:absolute;left:' + (x + 31) + 'px;top:' + (y + 23) +
+                     'px;transform:translateZ(28px);width:0;height:0', zMarket);
+      b.style.setProperty('--accent', '#34a06a');
+      el('blink', '--dur:' + (5.5 + (n % 5) * 1.3).toFixed(1) + 's;--dly:' +
+                  (-(n % 7) * 1.1).toFixed(1) + 's', b);
+      n++;
+    }
+  }
+  /* bring-and-buy tables along the aisle */
+  for (var t = 0; t < 3; t++) box(zMarket, 200 + t * 54, 178, 44, 30, 12);
+  label(zMarket, 180, -34, 8, 'Vendor Market');
+  label(zMarket, 180, 348, 8, 'RC sellers · diecast traders', 'sm det');
+})();
+
+/* market crowd dots */
+(function () {
+  var seed = 91;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for (var i = 0; i < 16; i++) {
+    var w = el('dotwrap', 'left:' + (rnd() * 350) + 'px;top:' + (rnd() * 320) +
+                          'px;transform:translateZ(5px)', zMarket);
+    el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
+  }
+})();
+
+/* ==========================================================================
+   4.  CAMERA ENGINE
+   --------------------------------------------------------------------------
+   State {tx,ty,scale,rz,rx}. One rAF loop drives:
+     - the active tween (easeInOutCubic, 1600ms, interruptible)
+     - the idle breathing (scale 1.000 -> 1.006, 6s sine) composited on top
+   ========================================================================== */
+/* --- MOTION PROFILES ------------------------------------------------------
+   TOUCH  : ~1100ms flights, deeper zoom per zone (small-screen legibility).
+   DESKTOP: 1600ms cinematic flights, keyframe scales as authored.
+   Detected from (pointer: coarse) / (hover: none) plus viewport size.       */
+var PROFILE = {
+  touch:   { dur: 1100, zoom: 1.30 },
+  desktop: { dur: 1600, zoom: 1.00 }
+};
+var DUR   = PROFILE.desktop.dur;
+var BREATHE_PERIOD = 6000;
+var BREATHE_AMP    = 0.006;
+
+var cur   = { tx: 0, ty: 0, scale: 0, rz: 0, rx: 0 };   /* live state       */
+var from  = null, to = null, t0 = 0, tweening = false;
+var fit   = 1, zoomBoost = 1, bias = { x: 0, y: 0 }, ovBias = 0;
+var lastCS = -1, lastRZ = 999, lastRX = 999;
+
+var mqCoarse  = window.matchMedia('(pointer: coarse), (hover: none)');
+var mqDesktop = window.matchMedia('(min-width: 900px) and (min-height: 560px)');
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/* responsive framing: keyframe scales stay pure, the viewport supplies `fit`,
+   the motion profile supplies flight duration and the zone zoom multiplier   */
+function measure() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var phoneLayout = !mqDesktop.matches;            /* bottom dock is showing  */
+  var touch = mqCoarse.matches || phoneLayout;
+
+  DUR = touch ? PROFILE.touch.dur : PROFILE.desktop.dur;
+
+  fit = Math.min(vw / 1550, vh / 980);
+  fit = Math.max(0.34, Math.min(1.20, fit));
+
+  /* zone poses zoom harder on phones so blocks stay legible at 390px */
+  zoomBoost = (phoneLayout ? 1.62 : 1) * (touch ? PROFILE.touch.zoom : PROFILE.desktop.zoom);
+
+  /* keep the subject clear of the chrome: phone = title pill above,
+     card + chip bar below; desktop = panel left, card bottom-right */
+  bias = phoneLayout ? { x: 0,  y: -(vh < 560 ? 34 : 92) }
+                     : { x: 74, y: -26 };
+  ovBias = phoneLayout ? -60 : 0;   /* lift the overview into the band between title and dock */
+}
+
+/* resolve a keyframe row into a concrete camera state for this viewport */
+function resolve(kf) {
+  var isOverview = (kf.id === 'overview');
+  var s = kf.scale * fit * (isOverview ? 1 : zoomBoost);
+  return {
+    tx: kf.tx * fit * (isOverview ? 1 : zoomBoost) + (isOverview ? 0 : bias.x),
+    ty: kf.ty * fit * (isOverview ? 1 : zoomBoost) + (isOverview ? ovBias : bias.y),
+    scale: s, rz: kf.rz, rx: kf.rx
+  };
+}
+
+function flyTo(kf) {
+  from = { tx: cur.tx, ty: cur.ty, scale: cur.scale, rz: cur.rz, rx: cur.rx };
+  to   = resolve(kf);
+  t0   = performance.now();
+  tweening = true;
+}
+
+function frame(now) {
+  if (tweening) {
+    var p = (now - t0) / DUR;
+    if (p >= 1) { p = 1; tweening = false; }
+    var e = easeInOutCubic(p);
+    cur.tx    = from.tx    + (to.tx    - from.tx)    * e;
+    cur.ty    = from.ty    + (to.ty    - from.ty)    * e;
+    cur.scale = from.scale + (to.scale - from.scale) * e;
+    cur.rz    = from.rz    + (to.rz    - from.rz)    * e;
+    cur.rx    = from.rx    + (to.rx    - from.rx)    * e;
+  }
+  /* idle breathing rides on top of the tweened scale, never replaces it */
+  var breath = 1 + BREATHE_AMP * 0.5 *
+               (1 - Math.cos(2 * Math.PI * (now % BREATHE_PERIOD) / BREATHE_PERIOD));
+
+  camera.style.transform =
+    'translate(' + cur.tx.toFixed(2) + 'px,' + cur.ty.toFixed(2) + 'px) scale(' +
+    (cur.scale * breath).toFixed(5) + ')';
+  world.style.transform =
+    'rotateX(' + cur.rx.toFixed(3) + 'deg) rotateZ(' + cur.rz.toFixed(3) + 'deg)';
+
+  /* label billboarding + zoom compensation: only write vars when they move */
+  if (Math.abs(cur.rz - lastRZ) > 0.01 || Math.abs(cur.rx - lastRX) > 0.01) {
+    world.style.setProperty('--crz', (-cur.rz).toFixed(2) + 'deg');
+    world.style.setProperty('--crx', (-cur.rx).toFixed(2) + 'deg');
+    lastRZ = cur.rz; lastRX = cur.rx;
+  }
+  if (Math.abs(cur.scale - lastCS) > 0.002) {
+    world.style.setProperty('--cs', cur.scale.toFixed(4));
+    document.body.classList.toggle('z-near', cur.scale > 0.62);
+    lastCS = cur.scale;
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ==========================================================================
+   5.  SELECTION GRAMMAR
+   ========================================================================== */
+var ZONES = ['zSquare', 'zGalleria', 'zDrift', 'zMarket'];
+var cardEl    = document.getElementById('card');
+var cardKick  = document.getElementById('cardKick');
+var cardTitle = document.getElementById('cardTitle');
+var cardList  = document.getElementById('cardList');
+var current   = null;
+
+function select(kf) {
+  current = kf;
+
+  /* zone glow + dim the rest to 60% */
+  ZONES.forEach(function (id) {
+    var z = document.getElementById(id);
+    var active = (kf.zone === id);
+    z.classList.toggle('is-active', active);
+    z.style.setProperty('--oz', kf.zone ? (active ? 1 : 0.6) : 1);
+  });
+  /* non-zone furniture (ground, mall) dims too when a surface zone is picked */
+  var restDim = (kf.zone && !kf.xray) ? 0.6 : 1;
+  gGround.style.setProperty('--oz', restDim);
+  gMall.style.setProperty('--oz', restDim);
+
+  /* x-ray: whole surface group down to 12%, basement revealed */
+  document.body.classList.toggle('xray', !!kf.xray);
+
+  /* legend chip state */
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
+    c.classList.toggle('on', c.dataset.id === kf.id);
+    c.setAttribute('aria-pressed', c.dataset.id === kf.id ? 'true' : 'false');
+  });
+
+  /* info card */
+  if (kf.id === 'overview') {
+    cardEl.classList.remove('show');
+  } else {
+    cardEl.style.setProperty('--accent', kf.accent);
+    cardKick.textContent  = kf.kick;
+    cardTitle.textContent = kf.title;
+    cardList.innerHTML = '';
+    kf.bullets.forEach(function (b) {
+      var li = document.createElement('li'); li.textContent = b; cardList.appendChild(li);
+    });
+    cardEl.classList.add('show');
+  }
+  flyTo(kf);
+}
+
+function go(id) {
+  var kf = KEYFRAMES.filter(function (k) { return k.id === id; })[0];
+  if (kf) select(kf);
+}
+
+/* ==========================================================================
+   6.  LEGEND UI
+   ========================================================================== */
+var chips = document.getElementById('chips');
+KEYFRAMES.forEach(function (kf) {
+  var li = document.createElement('li');
+  var b  = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip';
+  b.dataset.id = kf.id;
+  b.style.setProperty('--accent', kf.accent);
+  b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = '<span class="swatch"></span><span class="txt">' +
+                '<span class="nm"></span><span class="ds"></span></span>';
+  b.querySelector('.nm').textContent = kf.name;
+  b.querySelector('.ds').textContent = kf.desc;
+  b.addEventListener('click', function () { stopTour(); select(kf); });
+  li.appendChild(b);
+  chips.appendChild(li);
+});
+
+/* ==========================================================================
+   7.  PLAY FULL TOUR  (first frame -> last frame, the Remotion rehearsal)
+   ========================================================================== */
+var TOUR = ['overview', 'square', 'galleria', 'drift', 'market', 'overview'];
+var DWELL = 2200;
+var tourTimer = null, tourIdx = 0, tourOn = false;
+var tourBtn = document.getElementById('tourbtn');
+
+function stepTour() {
+  if (!tourOn) return;
+  go(TOUR[tourIdx]);
+  tourIdx++;
+  if (tourIdx >= TOUR.length) { tourTimer = setTimeout(stopTour, DUR + DWELL); return; }
+  tourTimer = setTimeout(stepTour, DUR + DWELL);
+}
+function startTour() {
+  tourOn = true; tourIdx = 0;
+  tourBtn.classList.add('running');
+  tourBtn.textContent = '■ Stop tour';
+  stepTour();
+}
+function stopTour() {
+  if (!tourOn && tourTimer === null) return;
+  tourOn = false;
+  clearTimeout(tourTimer); tourTimer = null;
+  tourBtn.classList.remove('running');
+  tourBtn.textContent = '▶ Play full tour';
+}
+tourBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (tourOn) stopTour(); else startTour();
+});
+
+/* any click anywhere cancels the tour; a click on empty stage returns home */
+document.addEventListener('pointerdown', function (e) {
+  if (e.target.closest('#tourbtn')) return;
+  stopTour();
+}, true);
+stage.addEventListener('click', function (e) {
+  if (e.target.closest('#hud') || e.target.closest('#card')) return;
+  go('overview');
+});
+
+/* ==========================================================================
+   8.  KEYBOARD 1-5 (+ Esc home, Space tour)
+   ========================================================================== */
+document.addEventListener('keydown', function (e) {
+  var kf = KEYFRAMES.filter(function (k) { return k.key === e.key; })[0];
+  if (kf) { stopTour(); select(kf); return; }
+  if (e.key === 'Escape') { stopTour(); go('overview'); }
+  if (e.code === 'Space') { e.preventDefault(); if (tourOn) stopTour(); else startTour(); }
+});
+
+/* ==========================================================================
+   9.  BOOT
+   ========================================================================== */
+measure();
+var start = resolve(KEYFRAMES[0]);
+cur.tx = start.tx; cur.ty = start.ty; cur.rz = start.rz; cur.rx = start.rx;
+cur.scale = start.scale * 0.86;              /* small settle-in on first paint */
+world.style.setProperty('--cs', cur.scale.toFixed(4));
+requestAnimationFrame(frame);
+select(KEYFRAMES[0]);
+
+var rzTimer = null;
+function reframe() {
+  clearTimeout(rzTimer);
+  rzTimer = setTimeout(function () {
+    measure();
+    if (current) flyTo(current);
+  }, 120);
+}
+window.addEventListener('resize', reframe);
+window.addEventListener('orientationchange', reframe);
+if (mqDesktop.addEventListener) {
+  mqDesktop.addEventListener('change', reframe);
+  mqCoarse.addEventListener('change', reframe);
+}
+
+})();
+</script>
+
+<!--
+================================================================================
+MANUAL QA CHECKLIST — TRACKSIDE motion prototype
+================================================================================
+Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 4 on a
+390 x 844 viewport first, then repeat on desktop.
+
+1. PHONE THUMB PASS (390px portrait) — every chip in the bottom bar is at least
+   46px tall and reachable one-handed; the bar scrolls horizontally through all
+   five; the title pill at the top and the info card never overlap the chip bar;
+   no chip, heading or bullet text wraps badly, clips or overflows.
+2. LEGEND SWEEP — tap chips 1 to 5 in order, then back. Flights are ~1.1s on
+   touch and ~1.6s on desktop, eased, and every pose visibly changes pan, zoom
+   AND angle (a drone move, never a slide or a snap). Zones fill the phone frame.
+3. INTERRUPT — tap a chip while another flight is mid-air. The camera retargets
+   smoothly from wherever it is: no jump back to the old pose, no double-tween.
+   Repeat rapidly 5 or 6 times.
+4. X-RAY HANDOFF — go Monument Square -> B1 Dorifto -> South Galleria. Ground
+   and mall fade to ~12% and the basement lights up over ~0.6s on the way down,
+   and fully restore on the way back up. No flicker, no stuck state.
+5. TOUR + CANCEL — press "Play full tour": Overview, Square, Galleria, Dorifto,
+   Market, Overview with a 2.2s dwell at each. Tap anywhere or tap a chip
+   mid-tour: it stops dead, hands control back, button resets. This sequence is
+   the promo-video render, so it must run clean start to finish.
+6. IDLE LIFE + ROTATE — leave it 30s on any pose: the world keeps breathing
+   (scale 1.000 to 1.006 over 6s), karts keep drifting the L-loop with trails,
+   RC cars keep lapping, crowd dots keep pulsing. Then rotate the phone to
+   landscape and back: layout reflows, dock stays one row, camera reframes.
+================================================================================
+-->
+</body>
+</html>
