@@ -101,12 +101,16 @@ body {
 
 /* ========================= LABELS (billboarded) ========================== */
 /* Counter-rotate the world rotation so labels always face the screen, and
-   counter-scale the camera zoom so they never overflow their pill.         */
+   counter-scale the camera zoom so they never overflow their pill.
+   --crzx is the extra counter-spin a ROTATED SUB-PLAN container hands down to
+   its own labels (a `grp` of spin -32deg sets --crzx:32deg), so a label inside
+   a rotated wing still reads horizontally.                                  */
 .lbl {
   position: absolute; left: 0; top: 0; width: 0; height: 0;
   transform-style: preserve-3d;
   transform: translateZ(var(--lz, 4px))
-             rotateZ(var(--crz, 38deg)) rotateX(var(--crx, -58deg))
+             rotateZ(calc(var(--crz, 38deg) + var(--crzx, 0deg)))
+             rotateX(var(--crx, -58deg))
              scale(calc(1 / var(--cs, .6)));
   pointer-events: none;
 }
@@ -123,6 +127,7 @@ body {
                   color: #6a7278; font-weight: 500; }
 .lbl.det { opacity: 0; transition: opacity .45s ease; }
 body.z-near .lbl.det { opacity: calc(var(--os,1) * var(--oz,1)); }
+body.z-far .lbl.sm { opacity: 0; }
 
 /* ========================= MICRO-ANIMATIONS ============================== */
 /* All keyframes are transform / opacity only. */
@@ -253,7 +258,7 @@ body.xray #gSurface { --os: .12; }
 #brand .sub { display: none; margin: 2px 0 0; font-size: 10.5px; color: #8b9299;
               letter-spacing: .03em; }
 
-/* ---- bottom dock: chip bar + tour button ---- */
+/* ---- bottom dock: chip bar ---- */
 #dock {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   background: rgba(255,255,255,.93);
@@ -289,23 +294,10 @@ body.xray #gSurface { --os: .12; }
              margin-top: 1px; overflow-wrap: anywhere; }
 .chip.on .ds { color: #b9c0c6; }
 
-#tourbtn {
-  margin-top: 8px; width: 100%; min-height: 44px;
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .06em;
-  color: #14181c; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  background: #eceeef; border: 1px solid rgba(0,0,0,.14); border-radius: 10px;
-  padding: 10px; transition: background .18s ease, transform .18s ease;
-}
-#tourbtn:active { transform: scale(.99); }
-#tourbtn.running { background: #24282c; color: #fff; border-color: #24282c; }
-#hint { display: none; margin-top: 8px; font-size: 9.5px; letter-spacing: .1em;
-        text-transform: uppercase; color: #a7aeb4; text-align: center; }
-
 /* ---- info card: slides up from the bottom, above the chip bar ---- */
 #card {
   position: fixed; left: 10px; right: 10px; z-index: 29;
-  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
   background: rgba(255,255,255,.95);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border: 1px solid rgba(0,0,0,.08); border-radius: 14px; padding: 13px 14px 12px;
@@ -335,10 +327,7 @@ body.xray #gSurface { --os: .12; }
 /* ---- landscape phone: keep the dock to one row ---- */
 @media (max-height: 520px) and (max-width: 899px) {
   #dock { padding-top: 7px; }
-  #tourbtn { position: absolute; right: 10px; top: -46px; width: auto; margin: 0;
-             min-height: 36px; font-size: 11px; padding: 6px 12px;
-             background: rgba(255,255,255,.93); border-radius: 999px; }
-  #card { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
+  #card { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
   #card li { font-size: 11.5px; }
   #card .cta button { min-height: 38px; }
 }
@@ -374,10 +363,6 @@ body.xray #gSurface { --os: .12; }
   .chip .nm { font-size: 12px; white-space: normal; }
   .chip .ds { display: block; }
   .chip.on .ds { color: #868d94; }
-  #tourbtn { margin-top: 11px; min-height: 0; font-size: 11.5px; letter-spacing: .04em;
-             padding: 9px 10px; border-radius: 8px; }
-  #tourbtn:hover { background: #e4e7e9; }
-  #hint { display: block; }
   #card { left: auto; right: 22px; bottom: 22px; width: 290px; border-radius: 12px;
           padding: 14px 15px 13px; }
   #card h2 { font-size: 15px; }
@@ -399,13 +384,16 @@ body.xray #gSurface { --os: .12; }
       <div id="gSurface" style="position:absolute;inset:0;transform-style:preserve-3d">
         <div id="gGround"></div>
         <div id="gMall"></div>
-        <div id="zSquare"    class="zone" style="left:130px;top:520px;width:1180px;height:200px"></div>
-        <div id="zGalleria"  class="zone" style="left:110px;top:180px;width:360px;height:280px"></div>
+        <!-- Monument Square: outdoor strip OUTSIDE the building, parallel to
+             the spine (same -32deg spin, offset perpendicular to the SE). -->
+        <div id="zSquare"    class="zone" style="left:682px;top:490px;width:700px;height:170px;transform:rotateZ(-32deg);--crzx:32deg"></div>
+        <!-- South Galleria: the widest part of the indoor spine, mid-to-south. -->
+        <div id="zGalleria"  class="zone" style="left:310px;top:408px;width:340px;height:340px;transform:rotateZ(-32deg);--crzx:32deg"></div>
       </div>
       <!-- basement, revealed by x-ray -->
       <div id="gB1">
-        <div id="zDrift"  class="zone" style="left:780px;top:180px;width:450px;height:460px"></div>
-        <div id="zMarket" class="zone" style="left:380px;top:300px;width:360px;height:330px"></div>
+        <div id="zDrift"  class="zone" style="left:180px;top:420px;width:450px;height:460px"></div>
+        <div id="zMarket" class="zone" style="left:740px;top:470px;width:360px;height:330px"></div>
       </div>
     </div>
   </div>
@@ -418,8 +406,6 @@ body.xray #gSurface { --os: .12; }
   </div>
   <div id="dock">
     <ul id="chips"></ul>
-    <button id="tourbtn" type="button">▶ Play full tour</button>
-    <div id="hint">keys 1–5</div>
   </div>
 </aside>
 
@@ -472,19 +458,19 @@ var KEYFRAMES = [
     bullets:['3 days, 4 activation zones, two levels',
              'Monument Square outdoor strip + South Galleria L1',
              'B1 car park converted: drift course + vendor market'],
-    /* focus (720,470) dz +45  */
-    tx:    0, ty:  24, scale: 0.62, rz: -38, rx: 58, xray:false, zone:null },
+    /* focus (740,496) dz +55 — centre of the built site, not of the plan */
+    tx:  -20, ty:  26, scale: 0.62, rz: -38, rx: 58, xray:false, zone:null },
 
   { id:'square', key:'2', accent:'#d9564a',
     name:'Monument Square',
     desc:'Curated cars · Big screen · RC try-and-buy',
     kick:'Outdoor · Ground level',
     title:'Monument Square',
-    bullets:['Curated car display, two rows down the 280m strip',
-             'Big screen at the west end for live feed and replays',
+    bullets:['Curated car display, two rows down the outdoor strip',
+             'Big screen at the south-west end for live feed and replays',
              'RC try-and-buy pen at the boulevard end'],
-    /* focus (720,620) dz 0    */
-    tx: -124, ty: -70, scale: 1.15, rz: -46, rx: 54, xray:false, zone:'zSquare' },
+    /* focus (1032,575) dz +20 — centre of the rotated square strip */
+    tx: -343, ty:  43, scale: 1.05, rz: -26, rx: 55, xray:false, zone:'zSquare' },
 
   { id:'galleria', key:'3', accent:'#3f7fd6',
     name:'South Galleria (L1)',
@@ -493,9 +479,9 @@ var KEYFRAMES = [
     title:'South Galleria',
     bullets:['4x MiniMe FPV racing rigs with driver screens',
              'Miniature RC circuit running heats all day',
-             'Diecast showcase and trader stalls around the atrium'],
-    /* focus (290,320) dz +20  */
-    tx:  606, ty: -27, scale: 1.35, rz: -29, rx: 61, xray:false, zone:'zGalleria' },
+             'Diecast showcase, information point and Lift Lobby B'],
+    /* focus (480,578) dz +40 — centre of the widened spine section */
+    tx:  176, ty: -81, scale: 1.20, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
 
   { id:'drift', key:'4', accent:'#efa227',
     name:'B1 — Dorifto Drift Karts',
@@ -505,8 +491,8 @@ var KEYFRAMES = [
     bullets:['L-shaped course laid into the existing car park bays',
              'Three karts running timed drift laps',
              'Entry at Lift Lobby A, spectators on the motorcycle park edge'],
-    /* focus (1005,410) dz -95 */
-    tx: -172, ty:  87, scale: 1.25, rz: -50, rx: 55, xray:true,  zone:'zDrift' },
+    /* focus (435,705) dz -92 — centroid of the L, under the galleria */
+    tx:   20, ty:-355, scale: 1.22, rz: -48, rx: 54, xray:true,  zone:'zDrift' },
 
   { id:'market', key:'5', accent:'#34a06a',
     name:'B1 — RC & Diecast Market',
@@ -516,8 +502,8 @@ var KEYFRAMES = [
     bullets:['RC sellers and diecast traders in a stall grid',
              'Bring-and-buy tables along the aisle',
              'Sits between the lift core and the drift course'],
-    /* focus (560,465) dz -95  */
-    tx:  180, ty:-159, scale: 1.30, rz: -32, rx: 60, xray:true,  zone:'zMarket' }
+    /* focus (920,635) dz -93 — under the south spine, east of Lift Lobby A */
+    tx: -327, ty:-131, scale: 1.28, rz: -30, rx: 60, xray:true,  zone:'zMarket' }
 ];
 
 /* ==========================================================================
@@ -559,6 +545,18 @@ function label(parent, x, y, z, text, cls) {
   d.firstChild.textContent = text;
   return d;
 }
+/* ROTATED SUB-PLAN: a positioned preserve-3d container spun about its own
+   centre. Children keep using rect / box / label / shadow in the container's
+   LOCAL coordinates. --crzx hands the labels the counter-spin they need.
+   Keep extrusions modest inside these: the .box side-quad pair (+y and -x)
+   stays the visible pair only while (camera rz + container spin) is inside
+   (-90deg, 0deg), which every pose in the table respects.                   */
+function grp(parent, cx, cy, w, h, deg) {
+  return el('grp',
+    'position:absolute;left:' + (cx - w / 2) + 'px;top:' + (cy - h / 2) + 'px;width:' + w +
+    'px;height:' + h + 'px;transform-style:preserve-3d;transform:rotateZ(' + deg + 'deg);' +
+    '--crzx:' + (-deg) + 'deg', parent);
+}
 function svgNS(tag, attrs, parent) {
   var n = document.createElementNS('http://www.w3.org/2000/svg', tag);
   for (var k in attrs) n.setAttribute(k, attrs[k]);
@@ -567,7 +565,30 @@ function svgNS(tag, attrs, parent) {
 }
 
 /* ==========================================================================
-   3.  BUILD THE WORLD
+   3.  BUILD THE WORLD  —  Millenia Walk, Level 1 directory plan
+   --------------------------------------------------------------------------
+   The mall is one long indoor street (the SPINE) running north-east to
+   south-west across the 1440 x 940 plan, with wings splaying off it:
+
+     N end  : MRT · Promenade entrance caps the spine
+     N wing : irregular quad splaying north-west          pale green   context
+     mid    : WEST WING bar meets the spine; Great Hall pyramid sits on the
+              junction roof                               pale orange  context
+     mid-S  : SOUTH GALLERIA, the widest section          pale blue    ACTIVE
+     S end  : SOUTH-EAST WING with the 2nd MRT entrance   pale purple  context
+     outside: MONUMENT SQUARE strip on the spine's south-east face, with
+              Raffles Boulevard running parallel beyond it              ACTIVE
+
+   Spine frame of reference (used to place everything that hangs off it):
+     centre (700,440), 1100 x 270, spin -32deg
+     local x: 0 = south tip, 1100 = north end
+     local y: 0 = north-west face, 270 = south-east face
+     world = centre + (lx-550)*u + (ly-135)*v
+       u = ( 0.8480, -0.5299)  along the spine, toward the north end
+       v = ( 0.5299,  0.8480)  across the spine, toward Monument Square
+
+   Grey box holds: wing tints are FLAT low-saturation fills on TOP faces and
+   floor slabs only (--faceT / slab background). Every vertical face stays grey.
    ========================================================================== */
 var gGround   = document.getElementById('gGround');
 var gMall     = document.getElementById('gMall');
@@ -577,27 +598,47 @@ var zGalleria = document.getElementById('zGalleria');
 var zDrift    = document.getElementById('zDrift');
 var zMarket   = document.getElementById('zMarket');
 
+var SPIN = -32, SPX = 700, SPY = 440, SPL = 1100, SPW = 270;
+var UX = 0.8480, UY = -0.5299, VX = 0.5299, VY = 0.8480;
+/* spine local point -> world plan point */
+function sp(lx, ly) {
+  return [SPX + (lx - SPL / 2) * UX + (ly - SPW / 2) * VX,
+          SPY + (lx - SPL / 2) * UY + (ly - SPW / 2) * VY];
+}
+var MALL_H = 110;
+
 /* ---- 3.1 ground plaza + Raffles Boulevard ------------------------------- */
-rect(gGround, 'plaza', 40, 120, 1360, 720);
-rect(gGround, 'road',  40, 848, 1360, 62,  'transform:translateZ(1px)');
-rect(gGround, 'roadline', 40, 877, 1360, 3, 'transform:translateZ(2px)');
-label(gGround, 720, 879, 3, 'Raffles Boulevard', 'sm');
-
-/* ---- 3.2 Monument Square (zone) ---------------------------------------- */
-zSquare.style.setProperty('--accent', '#d9564a');
-rect(zSquare, 'sqslab', 0, 0, 1180, 200);
-el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zSquare);
-label(zSquare, 860, 232, 30, 'Monument Square');
-label(zSquare, 590, 232, 6, '280m outdoor strip', 'sm det');
-
-/* big screen at the west end: wall slab + emissive face standing in x = const */
+rect(gGround, 'plaza', 40, 30, 1360, 880);
 (function () {
-  var sx = 22, sy = 30, sw = 22, sh = 140;         /* plan footprint of the screen wall */
-  shadow(zSquare, sx, sy, sw, sh);
-  box(zSquare, sx, sy, sw, sh, 100);
+  /* the boulevard runs parallel to the spine, just beyond Monument Square */
+  var c = sp(760, SPW / 2 + 447);
+  var g = grp(gGround, c[0], c[1], 700, 64, SPIN);
+  rect(g, 'road', 0, 0, 700, 64, 'transform:translateZ(1px)');
+  rect(g, 'roadline', 0, 30, 700, 3, 'transform:translateZ(2px)');
+  label(g, 350, 46, 3, 'Raffles Boulevard', 'sm det');
+})();
+
+/* ---- 3.2 Monument Square (zone) ----------------------------------------
+   Rotated strip, 700 x 170, spun with the spine and offset 290px along v so
+   it lies OUTSIDE the building on the south-east face, centred on spine local
+   x = 760 (the junction / north frontage). Local x 0 = south-west (big screen)
+   end, local x 700 = north-east (boulevard) end.                            */
+zSquare.style.setProperty('--accent', '#d9564a');
+rect(zSquare, 'sqslab', 0, 0, 700, 170);
+el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zSquare);
+/* label sits on the BOULEVARD side, not the mall side: on the mall side it
+   lands within one pill width of South Galleria at overview zoom. */
+label(zSquare, 350, 206, 24, 'Monument Square');
+label(zSquare, 350, -32, 6, 'Outdoor plaza strip', 'sm det');
+
+/* big screen at the south-west end: wall slab + emissive face standing in x = const */
+(function () {
+  var sx = 16, sy = 20, swd = 22, sh = 130;        /* plan footprint of the screen wall */
+  shadow(zSquare, sx, sy, swd, sh);
+  box(zSquare, sx, sy, swd, sh, 100);
   /* screen face: same construction as a box's -x side quad, held 2px proud */
   var p = el('fade', 'position:absolute;left:' + (sx - 2) + 'px;top:' + (sy + 10) +
-                     'px;width:78px;height:' + (sh - 20) + 'px;' +
+                     'px;width:70px;height:' + (sh - 20) + 'px;' +
                      'transform-origin:0% 50%;transform:rotateY(-90deg) translateZ(0px);' +
                      'transform-style:preserve-3d', zSquare);
   p.style.setProperty('--accent', '#d9564a');
@@ -607,18 +648,18 @@ label(zSquare, 590, 232, 6, '280m outdoor strip', 'sm det');
 
 /* curated car display: two rows of small blocks */
 (function () {
-  var y1 = 42, y2 = 122, x0 = 150, step = 76, n = 13;
+  var y1 = 26, y2 = 102, x0 = 104, step = 66, n = 7;
   for (var i = 0; i < n; i++) {
     var x = x0 + i * step;
-    box(zSquare, x, y1, 46, 26, 13);
-    box(zSquare, x, y2, 46, 26, 13);
+    box(zSquare, x, y1, 44, 24, 13);
+    box(zSquare, x, y2, 44, 24, 13);
   }
-  label(zSquare, x0 + (n * step) / 2 - 20, 96, 18, 'Curated cars', 'sm det');
+  label(zSquare, x0 + (n * step) / 2 - 12, 82, 18, 'Curated cars', 'sm det');
 })();
 
-/* RC try-and-buy pen at the east end */
+/* RC try-and-buy pen at the boulevard end */
 (function () {
-  var px = 1058, py = 26, pw = 108, ph = 150;
+  var px = 556, py = 16, pw = 124, ph = 138;
   rect(zSquare, '', px, py, pw, ph, 'background:#dcdee0;transform:translateZ(4px);border-radius:3px');
   /* low fence: 4 thin boxes */
   box(zSquare, px, py, pw, 5, 14);
@@ -626,8 +667,8 @@ label(zSquare, 590, 232, 6, '280m outdoor strip', 'sm det');
   box(zSquare, px, py, 5, ph, 14);
   box(zSquare, px + pw - 5, py, 5, ph, 14);
   /* tiny rc cars inside on a small oval */
-  var pathD = 'M ' + (px + 22) + ' ' + (py + 75) + ' A 32 46 0 1 0 ' + (px + 86) + ' ' + (py + 75) +
-              ' A 32 46 0 1 0 ' + (px + 22) + ' ' + (py + 75) + ' Z';
+  var pathD = 'M ' + (px + 26) + ' ' + (py + 69) + ' A 36 42 0 1 0 ' + (px + 98) + ' ' + (py + 69) +
+              ' A 36 42 0 1 0 ' + (px + 26) + ' ' + (py + 69) + ' Z';
   for (var i = 0; i < 3; i++) {
     el('rc', '--path:path("' + pathD + '");--dur:6.4s;--dly:' + (-i * 2.13) +
              's;transform:translateZ(6px);width:9px;height:5px;margin:-2.5px 0 0 -4.5px', zSquare);
@@ -639,27 +680,70 @@ label(zSquare, 590, 232, 6, '280m outdoor strip', 'sm det');
 (function () {
   var seed = 7;
   function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-  for (var i = 0; i < 34; i++) {
-    var x = 120 + rnd() * 920, y = 12 + rnd() * 176;
+  for (var i = 0; i < 30; i++) {
+    var x = 76 + rnd() * 470, y = 10 + rnd() * 150;
     var w = el('dotwrap', 'left:' + x + 'px;top:' + y + 'px;transform:translateZ(5px)', zSquare);
     el('dot', '--dur:' + (7 + rnd() * 6).toFixed(1) + 's;--dly:' + (-rnd() * 8).toFixed(1) + 's', w);
   }
 })();
 
-/* ---- 3.3 mall bar + Great Hall pyramid --------------------------------- */
-var MALL_H = 110;
-shadow(gMall, 110, 180, 1220, 280);
-box(gMall, 470, 180, 150, 280, MALL_H);                 /* link section        */
-box(gMall, 620, 180, 260, 280, MALL_H);                 /* Great Hall section  */
-box(gMall, 880, 180, 450, 280, MALL_H);                 /* north section       */
-label(gMall, 1105, 320, MALL_H + 16, 'Millenia Walk');
-
-/* Great Hall pyramid: 4 folded triangular faces on the roof */
+/* ---- 3.3 the SPINE: main indoor street + MRT cap + south tip ------------ */
 (function () {
-  var S = 240, H = 130;
-  var slant = Math.sqrt(H * H + (S / 2) * (S / 2));             /* 176.9 */
-  var tilt  = Math.atan2(H, S / 2) * 180 / Math.PI;             /* 47.3deg */
-  var cx = 750, cy = 320;
+  var g = grp(gMall, SPX, SPY, SPL, SPW, SPIN);
+  /* shadow only under the built sections; lx 120-460 is the open atrium */
+  shadow(g, 490, 0, 620, SPW);
+  box(g, 500, 0, 300, SPW, MALL_H);                     /* junction section    */
+  box(g, 800, 0, 300, SPW, MALL_H);                     /* north section       */
+  box(g,   0, 62, 110, 148, 34);                        /* south tip concourse */
+  /* anchored on the junction roof, not the north end: at overview zoom on a
+     390px phone it has to clear the MRT · Promenade pill by more than a pill
+     height once both are projected. */
+  label(g, 545, 150, MALL_H + 18, 'Millenia Walk');
+
+  /* MRT entrance block capping the north end */
+  box(g, 1110, 80, 100, 110, 46);
+  label(g, 1160, 42, 52, 'MRT · Promenade');
+
+  /* taxi stand off the south tip */
+  box(g, 20, 216, 74, 46, 22);
+  label(g, 57, 276, 28, 'Taxi', 'sm det');
+})();
+
+/* ---- 3.4 north wing: splays north-west off the spine's north third ------
+   Irregular footprint = two masses of different heights, so the shared plan
+   edge never produces two coplanar top faces (no z-fighting).               */
+(function () {
+  var g = grp(gMall, 740, 155, 300, 190, -12);
+  shadow(g, 6, 0, 290, 190);
+  box(g,   0,  0, 195, 190, 92, '--faceT:#dde7c4');
+  box(g, 195, 28, 105, 134, 80, '--faceT:#dde7c4');
+  /* toilet blocks tucked into the notch between the two masses */
+  box(g, 199,   2, 48, 22, 20);
+  box(g, 199, 164, 48, 22, 20);
+  label(g, 223, 202, 26, 'WC', 'sm det');
+  label(g,  98,  95, 100, 'North Wing', 'sm det');
+})();
+
+/* ---- 3.5 west wing: long bar meeting the spine at the mid junction ------
+   Bottom edge held at y = 342: the galleria's northernmost point is y = 344,
+   so the bar can reach into the spine without burying the atrium corner.    */
+(function () {
+  shadow(gMall, 100, 202, 530, 140);
+  box(gMall, 100, 202, 350, 140, 96, '--faceT:#f3ddb8');
+  box(gMall, 450, 202, 180, 140, 88, '--faceT:#f3ddb8');
+  box(gMall,  54, 238,  44,  46, 30);                   /* Lift Lobby E       */
+  label(gMall, 76, 222, 36, 'Lift Lobby E', 'sm det');
+  label(gMall, 270, 272, 104, 'West Wing', 'sm det');
+})();
+
+/* Great Hall pyramid: 4 folded triangular faces, now on the junction roof.
+   S is capped at 185 so the square footprint still fits inside the 270-wide
+   spine band once the band is spun -32deg (185 * 1.378 = 255 < 270).        */
+(function () {
+  var S = 185, H = 105;
+  var slant = Math.sqrt(H * H + (S / 2) * (S / 2));             /* 130.9 */
+  var tilt  = Math.atan2(H, S / 2) * 180 / Math.PI;             /* 48.6deg */
+  var c = sp(610, SPW / 2), cx = c[0], cy = c[1];
   var p = el('pyr', 'left:' + (cx - S / 2) + 'px;top:' + (cy - S / 2) + 'px;width:' + S +
                     'px;height:' + S + 'px;transform:translateZ(' + MALL_H + 'px)', gMall);
   for (var i = 0; i < 4; i++) {
@@ -669,42 +753,60 @@ label(gMall, 1105, 320, MALL_H + 16, 'Millenia Walk');
   label(gMall, cx, cy, MALL_H + H + 18, 'Great Hall', 'sm det');
 })();
 
-/* ---- 3.4 South Galleria (zone, open atrium cutaway) --------------------- */
+/* ---- 3.6 south-east wing: off the galleria's south end, 2nd MRT ---------
+   Held at -30deg and pushed clear along v so its north-west edge just misses
+   the galleria's south corner (425.9, 812.2). It is shallower than the rest
+   of the wings because the plan's bottom edge and Monument Square's south-west
+   end close in on this corner of the site from both sides.                  */
+(function () {
+  var g = grp(gMall, 566, 822, 340, 140, -30);
+  shadow(g, 6, 0, 330, 140);
+  box(g,   0,  0, 200, 140, 84, '--faceT:#ddd2e8');
+  box(g, 200, 14, 140, 112, 76, '--faceT:#ddd2e8');
+  box(g, 256, 128, 84, 54, 40);                         /* MRT entrance       */
+  label(g, 298, 192, 46, 'MRT');
+  label(g, 100,  70, 92, 'South-East Wing', 'sm det');
+})();
+
+/* ---- 3.7 South Galleria (zone, open atrium cutaway) ---------------------
+   The widest section of the spine: 340 x 340, spun with it. Local x 0 = the
+   south end that meets the south-east wing, local x 340 = toward the Great
+   Hall junction. Local y 0 = north-west face, 340 = Monument Square face.   */
 zGalleria.style.setProperty('--accent', '#3f7fd6');
-rect(zGalleria, '', 0, 0, 360, 280, 'background:#e1e3e5;border-radius:3px');
+rect(zGalleria, '', 0, 0, 340, 340, 'background:#c9e0ef;border-radius:3px');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zGalleria);
 /* atrium void frame at roof height = reads as an indoor space with the roof cut away */
-box(zGalleria, 0, 0, 360, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
-box(zGalleria, 0, 272, 360, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
-box(zGalleria, 0, 0, 8, 280, 4, 'transform:translateZ(' + MALL_H + 'px)');
-box(zGalleria, 352, 0, 8, 280, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 0, 0, 340, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 0, 332, 340, 8, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 0, 0, 8, 340, 4, 'transform:translateZ(' + MALL_H + 'px)');
+box(zGalleria, 332, 0, 8, 340, 4, 'transform:translateZ(' + MALL_H + 'px)');
 /* low perimeter walls */
-box(zGalleria, 0, 0, 360, 7, 26);
-box(zGalleria, 0, 273, 360, 7, 26);
-box(zGalleria, 0, 0, 7, 280, 26);
-box(zGalleria, 353, 0, 7, 280, 26);
-label(zGalleria, 180, -34, MALL_H + 26, 'South Galleria (L1)');
+box(zGalleria, 0, 0, 340, 7, 26);
+box(zGalleria, 0, 333, 340, 7, 26);
+box(zGalleria, 0, 0, 7, 340, 26);
+box(zGalleria, 333, 0, 7, 340, 26);
+label(zGalleria, 170, -38, MALL_H + 26, 'South Galleria');
 
 /* 4 MiniMe FPV racing rigs, each with a small upright screen */
 (function () {
   for (var i = 0; i < 4; i++) {
-    var x = 42 + i * 76, y = 34;
-    box(zGalleria, x, y, 52, 40, 22);
+    var x = 26 + i * 66, y = 24;
+    box(zGalleria, x, y, 54, 40, 22);
     /* driver screen: standing quad hinged on the rig's south edge */
-    var s = el('fade', 'position:absolute;left:' + (x + 4) + 'px;top:' + (y + 40) + 'px;width:44px;height:26px;' +
+    var s = el('fade', 'position:absolute;left:' + (x + 5) + 'px;top:' + (y + 40) + 'px;width:44px;height:26px;' +
                    'transform-origin:50% 0%;transform:rotateX(90deg);transform-style:preserve-3d', zGalleria);
     s.style.setProperty('--accent', '#3f7fd6');
     el('glowpanel', '', s);
   }
-  label(zGalleria, 180, 12, 40, 'MiniMe FPV racing', 'sm det');
+  label(zGalleria, 152, 6, 40, 'MiniMe FPV racing', 'sm det');
 })();
 
 /* miniature RC circuit oval */
 (function () {
-  var cx = 180, cy = 192, rx = 106, ry = 52;
+  var cx = 160, cy = 208, rx = 100, ry = 52;
   var d = 'M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx + rx) + ' ' + cy +
           ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx - rx) + ' ' + cy + ' Z';
-  var svg = svgNS('svg', { width: 360, height: 280, viewBox: '0 0 360 280',
+  var svg = svgNS('svg', { width: 340, height: 340, viewBox: '0 0 340 340',
     style: 'position:absolute;left:0;top:0;transform:translateZ(3px)', class: 'flat' }, zGalleria);
   svg.style.background = 'none';
   svgNS('path', { d: d, fill: 'none', stroke: '#c8cbce', 'stroke-width': 22 }, svg);
@@ -714,38 +816,56 @@ label(zGalleria, 180, -34, MALL_H + 26, 'South Galleria (L1)');
     el('rc', '--path:path("' + d + '");--dur:5.2s;--dly:' + (-i * 1.73).toFixed(2) +
              's;transform:translateZ(6px)', zGalleria);
   }
+  label(zGalleria, 160, 266, 8, 'RC circuit', 'sm det');
 })();
 
-/* diecast market stalls along the east side */
+/* diecast market stalls along the south end */
 (function () {
   for (var r = 0; r < 4; r++) {
-    var x = 300, y = 30 + r * 58;
-    box(zGalleria, x, y, 44, 40, 20);
-    var b = el('fade', 'position:absolute;left:' + (x + 22) + 'px;top:' + (y + 20) +
+    var x = 26 + r * 62, y = 278;
+    box(zGalleria, x, y, 54, 40, 20);
+    var b = el('fade', 'position:absolute;left:' + (x + 27) + 'px;top:' + (y + 20) +
                    'px;transform:translateZ(24px);width:0;height:0', zGalleria);
     b.style.setProperty('--accent', '#3f7fd6');
     el('blink', '--dur:' + (6 + r * 1.7).toFixed(1) + 's;--dly:' + (-r * 1.9).toFixed(1) + 's', b);
   }
-  label(zGalleria, 322, 264, 26, 'Diecast showcase', 'sm det');
+  label(zGalleria, 148, 328, 26, 'Diecast showcase', 'sm det');
+})();
+
+/* escalator hint: two thin parallel strips crossing the street, plus the
+   Lift Lobby B core and the red information point */
+(function () {
+  rect(zGalleria, '', 294, 44, 11, 200,
+       'background:#cfd3d6;border-radius:2px;transform:translateZ(3px)');
+  rect(zGalleria, '', 311, 44, 11, 200,
+       'background:#cfd3d6;border-radius:2px;transform:translateZ(3px)');
+  label(zGalleria, 308, 30, 8, 'Escalators', 'sm det');
+
+  box(zGalleria, 282, 272, 46, 48, 30);
+  label(zGalleria, 305, 260, 36, 'Lift Lobby B', 'sm det');
+
+  rect(zGalleria, '', 238, 108, 26, 26,
+       'background:#d9564a;border-radius:50%;transform:translateZ(5px)');
+  label(zGalleria, 251, 94, 12, 'Information', 'sm det');
 })();
 
 /* crowd dots in the galleria */
 (function () {
   var seed = 31;
   function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-  for (var i = 0; i < 14; i++) {
-    var w = el('dotwrap', 'left:' + (30 + rnd() * 260) + 'px;top:' + (100 + rnd() * 160) +
+  for (var i = 0; i < 16; i++) {
+    var w = el('dotwrap', 'left:' + (20 + rnd() * 290) + 'px;top:' + (100 + rnd() * 210) +
                           'px;transform:translateZ(5px)', zGalleria);
     el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
   }
 })();
 
-/* ---- 3.5 B1 slab, parking grid ----------------------------------------- */
-rect(gB1, 'b1slab',  60, 140, 1320, 660);
-rect(gB1, 'parkgrid', 74, 154, 1292, 632, 'transform:translateZ(1px)');
-label(gB1, 200, 176, 6, 'B1 Car Park', 'sm');
+/* ---- 3.8 B1 slab, parking grid ----------------------------------------- */
+rect(gB1, 'b1slab',  70, 290, 1130, 610);
+rect(gB1, 'parkgrid', 84, 304, 1102, 582, 'transform:translateZ(1px)');
+label(gB1, 220, 322, 6, 'B1 Car Park', 'sm det');
 
-/* ---- 3.6 Dorifto Zone (L-shaped, zone) --------------------------------- */
+/* ---- 3.9 Dorifto Zone (L-shaped, zone) --------------------------------- */
 zDrift.style.setProperty('--accent', '#efa227');
 /* the L: vertical arm (local x 230-450, y 0-290) + horizontal arm (x 0-450, y 290-460) */
 rect(zDrift, 'driftfloor', 230,   0, 220, 292, 'transform:translateZ(2px)');
@@ -800,7 +920,7 @@ rect(zDrift, 'mcpark', -92, 358, 86, 96, 'transform:translateZ(3px)');
 label(zDrift, -49, 470, 6, 'Motorcycle park', 'sm det');
 label(zDrift, 300, -42, 8, 'Dorifto Zone');
 
-/* ---- 3.7 Vendor Market (zone) ------------------------------------------ */
+/* ---- 3.10 Vendor Market (zone) ----------------------------------------- */
 zMarket.style.setProperty('--accent', '#34a06a');
 rect(zMarket, '', 0, 0, 360, 330, 'background:#d9dcde;border-radius:3px;transform:translateZ(2px)');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zMarket);
@@ -857,7 +977,7 @@ var BREATHE_AMP    = 0.006;
 
 var cur   = { tx: 0, ty: 0, scale: 0, rz: 0, rx: 0 };   /* live state       */
 var from  = null, to = null, t0 = 0, tweening = false;
-var fit   = 1, zoomBoost = 1, bias = { x: 0, y: 0 }, ovBias = 0;
+var fit   = 1, zoomBoost = 1, bias = { x: 0, y: 0 }, ovBias = 0, ovZoom = 1;
 var lastCS = -1, lastRZ = 999, lastRX = 999;
 
 var mqCoarse  = window.matchMedia('(pointer: coarse), (hover: none)');
@@ -887,15 +1007,16 @@ function measure() {
   bias = phoneLayout ? { x: 0,  y: -(vh < 560 ? 34 : 92) }
                      : { x: 74, y: -26 };
   ovBias = phoneLayout ? -60 : 0;   /* lift the overview into the band between title and dock */
+  ovZoom = phoneLayout ? 1.45 : 1;  /* the compact real-plan site needs a closer overview on portrait */
 }
 
 /* resolve a keyframe row into a concrete camera state for this viewport */
 function resolve(kf) {
   var isOverview = (kf.id === 'overview');
-  var s = kf.scale * fit * (isOverview ? 1 : zoomBoost);
+  var s = kf.scale * fit * (isOverview ? ovZoom : zoomBoost);
   return {
-    tx: kf.tx * fit * (isOverview ? 1 : zoomBoost) + (isOverview ? 0 : bias.x),
-    ty: kf.ty * fit * (isOverview ? 1 : zoomBoost) + (isOverview ? ovBias : bias.y),
+    tx: kf.tx * fit * (isOverview ? ovZoom : zoomBoost) + (isOverview ? 0 : bias.x),
+    ty: kf.ty * fit * (isOverview ? ovZoom : zoomBoost) + (isOverview ? ovBias : bias.y),
     scale: s, rz: kf.rz, rx: kf.rx
   };
 }
@@ -937,6 +1058,7 @@ function frame(now) {
   if (Math.abs(cur.scale - lastCS) > 0.002) {
     world.style.setProperty('--cs', cur.scale.toFixed(4));
     document.body.classList.toggle('z-near', cur.scale > 0.62);
+    document.body.classList.toggle('z-far', cur.scale < 0.40);
     lastCS = cur.scale;
   }
   requestAnimationFrame(frame);
@@ -1013,66 +1135,32 @@ KEYFRAMES.forEach(function (kf) {
                 '<span class="nm"></span><span class="ds"></span></span>';
   b.querySelector('.nm').textContent = kf.name;
   b.querySelector('.ds').textContent = kf.desc;
-  b.addEventListener('click', function () { stopTour(); select(kf); });
+  b.addEventListener('click', function () { select(kf); });
   li.appendChild(b);
   chips.appendChild(li);
 });
 
-/* ==========================================================================
-   7.  PLAY FULL TOUR  (first frame -> last frame, the Remotion rehearsal)
-   ========================================================================== */
-var TOUR = ['overview', 'square', 'galleria', 'drift', 'market', 'overview'];
-var DWELL = 2200;
-var tourTimer = null, tourIdx = 0, tourOn = false;
-var tourBtn = document.getElementById('tourbtn');
-
-function stepTour() {
-  if (!tourOn) return;
-  go(TOUR[tourIdx]);
-  tourIdx++;
-  if (tourIdx >= TOUR.length) { tourTimer = setTimeout(stopTour, DUR + DWELL); return; }
-  tourTimer = setTimeout(stepTour, DUR + DWELL);
-}
-function startTour() {
-  tourOn = true; tourIdx = 0;
-  tourBtn.classList.add('running');
-  tourBtn.textContent = '■ Stop tour';
-  stepTour();
-}
-function stopTour() {
-  if (!tourOn && tourTimer === null) return;
-  tourOn = false;
-  clearTimeout(tourTimer); tourTimer = null;
-  tourBtn.classList.remove('running');
-  tourBtn.textContent = '▶ Play full tour';
-}
-tourBtn.addEventListener('click', function (e) {
-  e.stopPropagation();
-  if (tourOn) stopTour(); else startTour();
-});
-
-/* any click anywhere cancels the tour; a click on empty stage returns home */
-document.addEventListener('pointerdown', function (e) {
-  if (e.target.closest('#tourbtn')) return;
-  stopTour();
-}, true);
+/* a click on empty stage returns home.
+   NOTE: the flyTo / KEYFRAMES machinery below stays deliberately intact and
+   device-agnostic. The on-screen "play full tour" control is gone, but a
+   render can still walk the table row by row (fit = 1, zoom boost = 1,
+   bias = 0) to produce the promo video.                                     */
 stage.addEventListener('click', function (e) {
   if (e.target.closest('#hud') || e.target.closest('#card')) return;
   go('overview');
 });
 
 /* ==========================================================================
-   8.  KEYBOARD 1-5 (+ Esc home, Space tour)
+   7.  KEYBOARD 1-5 (+ Esc home)
    ========================================================================== */
 document.addEventListener('keydown', function (e) {
   var kf = KEYFRAMES.filter(function (k) { return k.key === e.key; })[0];
-  if (kf) { stopTour(); select(kf); return; }
-  if (e.key === 'Escape') { stopTour(); go('overview'); }
-  if (e.code === 'Space') { e.preventDefault(); if (tourOn) stopTour(); else startTour(); }
+  if (kf) { select(kf); return; }
+  if (e.key === 'Escape') { go('overview'); }
 });
 
 /* ==========================================================================
-   9.  BOOT
+   8.  BOOT
    ========================================================================== */
 measure();
 var start = resolve(KEYFRAMES[0]);
@@ -1120,10 +1208,11 @@ Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 4 on a
 4. X-RAY HANDOFF — go Monument Square -> B1 Dorifto -> South Galleria. Ground
    and mall fade to ~12% and the basement lights up over ~0.6s on the way down,
    and fully restore on the way back up. No flicker, no stuck state.
-5. TOUR + CANCEL — press "Play full tour": Overview, Square, Galleria, Dorifto,
-   Market, Overview with a 2.2s dwell at each. Tap anywhere or tap a chip
-   mid-tour: it stops dead, hands control back, button resets. This sequence is
-   the promo-video render, so it must run clean start to finish.
+5. LABEL PASS — at overview zoom on 390px, only these labels are readable and
+   none of them collide: Millenia Walk, South Galleria, Monument Square,
+   MRT · Promenade, MRT, plus Dorifto Zone and Vendor Market in x-ray. Every
+   other label stays hidden until a zone pose crosses the z-near threshold,
+   and each one reads horizontally even inside a rotated wing.
 6. IDLE LIFE + ROTATE — leave it 30s on any pose: the world keeps breathing
    (scale 1.000 to 1.006 over 6s), karts keep drifting the L-loop with trails,
    RC cars keep lapping, crowd dots keep pulsing. Then rotate the phone to
