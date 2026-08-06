@@ -44,6 +44,7 @@
      planterTree(parent,x,y)             ~24 x 24   canopy disc, trunk h20
      pillar(parent,x,y)                  ~10 x 10   column h40
      merchStall(parent,x,y,rotDeg)       ~60 x 30   counter h14, back wall h34
+     beverageCart(parent,x,y,rotDeg)     ~34 x 22   counter h13, canopy on 2 posts
    ========================================================================== */
 "use strict";
 (function () {
@@ -167,6 +168,29 @@
     H.box(w, 2, 0, W - 4, 6, 34, shade);
   }
 
+  /* beverageCart — small serving counter with a flat canopy on two thin posts
+     and a couple of cup dots sat on the counter top. Informal F&B point for
+     the B1 lounge. Footprint ~34 x 22. */
+  function beverageCart(parent, x, y, rotDeg) {
+    var W = 34, D = 22;
+    var w = wrap(parent, x, y, W, D, rotDeg);
+    H.shadow(w, 0, 0, W, D);
+    /* counter body, inset from the footprint so the canopy oversails it */
+    H.box(w, 3, 7, W - 6, D - 11, 13,
+      '--faceT:#e0e4e7;--faceA:#c1c7cc;--faceB:#ccd1d6;');
+    /* two cup dots on the counter top (counter extrudes to z 13) */
+    H.rect(w, '', 10, 12, 4, 4,
+      'background:#8f6bb3;border-radius:50%;transform:translateZ(13.6px)');
+    H.rect(w, '', 18, 14, 4, 4,
+      'background:#c8834a;border-radius:50%;transform:translateZ(13.6px)');
+    /* two thin posts carrying a flat canopy over the whole footprint */
+    H.box(w, 3,     2, 3, 3, 30, DARK_METAL);
+    H.box(w, W - 6, 2, 3, 3, 30, DARK_METAL);
+    H.rect(w, '', 0, 0, W, D,
+      'background:#ded2bd;border-radius:3px;transform:translateZ(30px);' +
+      'box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)');
+  }
+
   /* ==========================================================================
      PUBLIC API
      ========================================================================== */
@@ -177,7 +201,8 @@
     parasol: parasol,
     planterTree: planterTree,
     pillar: pillar,
-    merchStall: merchStall
+    merchStall: merchStall,
+    beverageCart: beverageCart
   };
 
 })();

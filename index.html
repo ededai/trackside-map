@@ -36,13 +36,18 @@ body {
 /* ========================= STAGE / CAMERA ================================ */
 #stage {
   position: fixed; inset: 0; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
   perspective: 3600px; perspective-origin: 50% 50%;
   background:
     radial-gradient(120% 90% at 50% 30%, #ffffff 0%, #fafafb 55%, #f2f3f4 100%);
-  touch-action: none;                 /* drag-to-orbit owns horizontal gestures */
-  cursor: grab;
+  touch-action: none;                 /* drag-to-orbit owns the whole gesture */
 }
-body.dragging #stage { cursor: grabbing; }
+/* grab / grabbing affordance is a DESKTOP-only cue: on touch there is no
+   cursor and `hover:none` devices must not inherit a pointer style. */
+@media (hover: hover) and (pointer: fine) {
+  #stage { cursor: grab; }
+  body.dragging #stage { cursor: grabbing; }
+}
 /* #camera is a zero-size point at the stage centre. It carries pan + zoom. */
 #camera {
   position: absolute; left: 50%; top: 50%; width: 0; height: 0;
@@ -179,26 +184,41 @@ body.z-far .lbl.sm { opacity: 0; }
 
 /* --- Dorifto karts + trails --- */
 .kartset { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+/* karts are 1.4x the v3 size (17x9 -> 24x13) so the driver reads at zone zoom */
 .kart {
-  position: absolute; left: 0; top: 0; width: 17px; height: 9px;
-  margin: -4.5px 0 0 -8.5px; border-radius: 3px;
+  position: absolute; left: 0; top: 0; width: 24px; height: 13px;
+  margin: -6.5px 0 0 -12px; border-radius: 4px;
   background: var(--accent, #7d848a);
   offset-path: var(--path);
   offset-rotate: auto var(--drift, 22deg);   /* yaw held ahead of travel = drift */
-  animation: lap var(--dur, 9s) linear infinite;
+  animation: lap var(--dur, 19s) linear infinite;   /* ~60% of v3 ground speed */
   animation-delay: var(--dly, 0s);
   will-change: transform;
 }
+/* --- kart driver -----------------------------------------------------------
+   .kart carries an opacity (the --os/--oz/--ol calc), which makes it a
+   GROUPING element — every child is flattened into the kart's own plane, so
+   translateZ here would do nothing. The driver is therefore drawn as two flat
+   overlays on the shell: a shoulder pad and a helmeted head disc. Because the
+   kart plane is already billboard-free (it lies on the road and yaws with
+   offset-rotate), this reads as a seated driver from every camera pose, and
+   the trail ghosts inherit it at their own --ol so the trails still work. */
+.kart > i { position: absolute; display: block; }
+.kart > i.drv-s { left: 6px; top: 1.5px; width: 10px; height: 10px;
+                  border-radius: 4px; background: rgba(44,50,56,.55); }
+.kart > i.drv-h { left: 8.5px; top: 3.5px; width: 6px; height: 6px;
+                  border-radius: 50%; background: var(--helm, #eef1f3);
+                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); }
 .kart.t1 { --ol: .40; transform-box: fill-box; }
 .kart.t2 { --ol: .22; }
 .kart.t3 { --ol: .11; }
 .kart.t4 { --ol: 0;  }                      /* revealed only when amplified  */
 .kart.lead { --ol: 1; background: var(--accent, #5d656c); filter: brightness(.8) saturate(1.15); }
-.kart.lead::after {
-  content: ''; position: absolute; inset: 1px 2px auto 2px; height: 3px;
+.kart.lead::after {                          /* nose highlight, clear of the driver */
+  content: ''; position: absolute; right: 2px; top: 3px; width: 5px; height: 7px;
   border-radius: 2px; background: rgba(255,255,255,.5);
 }
-.zone.is-active .kart          { --dur: 6.4s; }
+.zone.is-active .kart          { --dur: 13.4s; }
 .zone.is-active .kart.t1       { --ol: .55; }
 .zone.is-active .kart.t2       { --ol: .36; }
 .zone.is-active .kart.t3       { --ol: .22; }
@@ -477,7 +497,10 @@ body.xray #gSurface { --os: .12; }
         <div id="gB1ctx" style="position:absolute;inset:0;transform-style:preserve-3d"></div>
         <div id="gLiftB1" style="position:absolute;inset:0;transform-style:preserve-3d"></div>
         <div id="zDrift"   class="zone" style="left:80px;top:300px;width:470px;height:365px"></div>
-        <div id="zDisplay" class="zone" style="left:85px;top:465px;width:355px;height:330px"></div>
+        <!-- v4: shrunk (330 -> 215 deep) and pulled south. The old northern
+             third is deliberately NOT in the zone any more — it is left as
+             open clear car-park floor. -->
+        <div id="zDisplay" class="zone" style="left:85px;top:585px;width:355px;height:215px"></div>
       </div>
       <!-- level-link shaft: spans both levels, so it hangs off #world -->
       <div id="gLink" style="position:absolute;inset:0;transform-style:preserve-3d"></div>
@@ -564,19 +587,19 @@ var KEYFRAMES = [
     desc:'MiniMe FPV racing · Diecast showcase',
     kick:'Indoor · Level 1 spine',
     title:'South Galleria 4A + 4B',
-    bullets:['4A — MiniMe FPV racing rigs with driver screens and a mini RC circuit',
-             '4B — Diecast showcase, collector stalls running all three days',
+    bullets:['4A — six MiniMe FPV rigs with seated drivers ringing a winding mountain-pass circuit',
+             '4B — Diecast showcase, collector stalls racked with colour, running all three days',
              'Both rooms sit on the indoor street, a short walk from the south entrance'],
     /* focus (380,521) dz +34 — centre of the two rooms */
     tx:  308, ty: -88, scale: 1.18, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
 
   { id:'drift', key:'4', accent:'#efa227',
     name:'B1 — Dorifto Drift Karts',
-    desc:'L-shaped course · Lift Lobby A entry',
+    desc:'Donut circle + figure-8 course · Lift Lobby A entry',
     kick:'Basement 1 · Drift',
     title:'Dorifto Zone',
-    bullets:['L-shaped loop laid into the existing car park bays',
-             'Three karts running timed drift laps with trails',
+    bullets:['A real drift course inside the L: a donut circle south, a figure-eight north',
+             'Six karts with drivers running timed drift laps with trails',
              'Entry at Lift Lobby A, spectators on the motorcycle park corner'],
     /* focus (265,432) dz -92 — centroid of the L */
     tx:  396, ty:-266, scale: 1.12, rz: -44, rx: 56, xray:true,  zone:'zDrift' },
@@ -586,11 +609,11 @@ var KEYFRAMES = [
     desc:'Six display cars · Rest area',
     kick:'Basement 1 · Display',
     title:'Car Display & Lounge',
-    bullets:['Six feature cars on angled display pads through the middle of the zone',
-             'Rest area with outdoor lounge chairs and parasols',
+    bullets:['Six feature cars on angled display pads, consolidated at the east end',
+             'Open clear floor to the west, lounge-chair clusters, parasols and a beverage cart',
              'Chill and wait here between Dorifto kart heats'],
-    /* focus (262,630) dz -92 — centre of the pads + lounge */
-    tx:  366, ty:-345, scale: 1.26, rz: -34, rx: 60, xray:true,  zone:'zDisplay' }
+    /* focus (262,696) dz -92 — centre of the consolidated pads + lounge */
+    tx:  319, ty:-380, scale: 1.26, rz: -34, rx: 60, xray:true,  zone:'zDisplay' }
 ];
 
 /* INTERNAL rows — reachable only through the Lift Lobby A level link.
@@ -601,22 +624,22 @@ var INTERNAL = [
     desc:'level link',
     kick:'Level 1 · Lift Lobby A',
     title:'Lift Lobby A — Level 1',
-    bullets:['You are on the indoor spine, one third along from the south entrance',
-             'South Galleria 4A + 4B is a few steps west',
+    bullets:['You are on the indoor spine, about halfway along from the south entrance',
+             'South Galleria 4A + 4B is a short walk west, the Great Hall is east',
              'Tap the lobby again to drop back down to B1'],
-    /* focus (510,652) dz +46 */
-    tx:   69, ty:-137, scale: 1.30, rz: -38, rx: 58, xray:false, zone:null },
+    /* focus (782,653) dz +46 — lobby moved east, see LOBBY */
+    tx: -210, ty: -22, scale: 1.30, rz: -38, rx: 58, xray:false, zone:null },
 
   { id:'lobbyB1', key:null, accent:'#4d7cd6',
     name:'Lift Lobby A (B1)',
     desc:'level link',
     kick:'Basement 1 · Lift Lobby A',
     title:'Lift Lobby A — Basement 1',
-    bullets:['You are at the east edge of the B1 activation area',
+    bullets:['You are out in the car park, clear of the activation area, by the third pillar row',
              'Dorifto karts to the north-west, car display and lounge to the west',
              'Tap the lobby again to ride back up to Level 1'],
-    /* focus (510,652) dz -92 */
-    tx:   69, ty:-289, scale: 1.30, rz: -38, rx: 58, xray:true,  zone:null }
+    /* focus (782,653) dz -92 — lobby moved east, see LOBBY */
+    tx: -210, ty:-174, scale: 1.30, rz: -38, rx: 58, xray:true,  zone:null }
 ];
 var ALL_KF = KEYFRAMES.concat(INTERNAL);
 
@@ -706,9 +729,11 @@ function prop(name) {
      y  435 -  610   THE SPINE — one indoor street running WEST to EAST
      x  190 -  570   SOUTH GALLERIA 4A (west, MiniMe FPV) + 4B (east, diecast)
      x  640 -  870   mid-spine: escalators, SG 1 and SG 2 kiosk pads (context)
-     x  470 -  550   LIFT LOBBY A, spine's SOUTH side, ~1/3 from the west end
-     x  862 -  972   OFFICIAL F1 MERCHANDISE anchor, beside the Great Hall
-     x  982 - 1198   THE GREAT HALL — octagonal pad with the pyramid above
+     x  750 -  814   LIFT LOBBY A, spine's SOUTH side, ~halfway along (v4:
+                     moved east to sit over the relocated B1 lobby)
+     x  982 - 1198   OFFICIAL F1 MERCHANDISE — the octagonal pad under the
+                     pyramid. v4: the merch is INSIDE this hall, so the hall
+                     is labelled by it and has no separate "Great Hall" label
      x 1000 - 1370   MONUMENT SQUARE — outdoor plaza, north-east, tree-ringed
      x 1262 - 1402   NORTH GALLERIA, faded context
      both bands      faded low retail units lining the spine, no unit numbers
@@ -718,10 +743,15 @@ function prop(name) {
      x   80 -  550   ACTIVATION REGION, top-left quadrant of the car park
                      DORIFTO ZONE  = an L: horizontal arm along the TOP edge
                                      (motorcycle park corner) + vertical arm
-                                     down the WEST edge
+                                     down the WEST edge. Inside it, a drift
+                                     COURSE: donut circle south, figure-8 north
                      REST / LOUNGE = directly south of the vertical arm
-                     CAR DISPLAYS  = 6 angled pads mid-zone
-                     LIFT LOBBY A  = east edge, directly under the L1 lobby
+                     CAR DISPLAYS  = 6 angled pads, all consolidated on the
+                                     EAST pad; the west of the old area is
+                                     left as open clear floor
+     x  750 -  814   LIFT LOBBY A  = out in the car park, immediately EAST of
+                                     the third pillar column (x 248/428/720),
+                                     directly under the L1 lobby
    ========================================================================== */
 var gGround   = document.getElementById('gGround');
 var gMall     = document.getElementById('gMall');
@@ -736,7 +766,14 @@ var zDrift    = document.getElementById('zDrift');
 var zDisplay  = document.getElementById('zDisplay');
 
 var MALL_H  = 110;
-var LOBBY   = { x: 470, y: 615, w: 80, h: 76, z: 46 };   /* shared plan footprint */
+/* LIFT LOBBY A — shared plan footprint, used on BOTH levels so the link shaft
+   stays perfectly vertical.
+   v4 move: the B1 lobby sat hard against the Car Display zone glow, so it is
+   now parked immediately EAST of the THIRD pillar column from the west
+   (x 248 -> 428 -> 720; see 3.12). Its y is held at the spine's south-side
+   value so the L1 lobby can move with it and the shaft does NOT have to angle.
+   v4 resize: block down to ~80% (80x76x46 -> 64x61x37).                     */
+var LOBBY   = { x: 750, y: 622, w: 64, h: 61, z: 37 };   /* centre = 782, 652.5 */
 
 /* ---- 3.1 ground plaza + Raffles Boulevard ------------------------------- */
 rect(gGround, 'plaza', 30, 40, 1380, 860);
@@ -855,7 +892,8 @@ label(gMall, 760, 300, 20, 'Millenia Walk');
     }
   }
   unitRow(332, 92, 190, 1250, [[966, 1216]]);
-  unitRow(620, 92, 220, 1250, [[452, 568], [966, 1216]]);
+  /* south-side skip follows Lift Lobby A, which moved east in v4 */
+  unitRow(620, 92, 220, 1250, [[730, 830], [966, 1216]]);
 })();
 
 /* ---- 3.6 South Galleria 4A + 4B (zone) ----------------------------------
@@ -871,44 +909,108 @@ box(zGalleria, 183, 4, 10, 172, 28);
 box(zGalleria, 0,   0, 380, 6, 26);
 box(zGalleria, 0, 174, 380, 6, 26);
 label(zGalleria, 190, -28, 44, 'South Galleria 4A + 4B');
-label(zGalleria,  90, 166,  8, '4A · MiniMe FPV', 'sm det');
+label(zGalleria,  90, 196,  8, '4A · MiniMe FPV', 'sm det');   /* clear of the south rig row */
 label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
-/* 4A — three MiniMe FPV rigs with driver screens + a mini RC circuit */
+/* 4A — SIX MiniMe FPV rigs with seated drivers, 3 along each side, ringing a
+   winding mountain-pass (touge) circuit. Six RC cars, one colour each.       */
 (function () {
-  for (var i = 0; i < 3; i++) {
-    var x = 14 + i * 56, y = 18;
-    box(zGalleria, x, y, 46, 34, 20);
-    var s = el('fade', 'position:absolute;left:' + (x + 4) + 'px;top:' + (y + 34) +
-                       'px;width:38px;height:22px;transform-origin:50% 0%;' +
-                       'transform:rotateX(90deg);transform-style:preserve-3d', zGalleria);
+  /* seated person: shoulder pad + helmeted head disc, drawn flat on a rig top.
+     Kept local (not a props.js builder) so there is no fallback branch — 4A
+     must never lose its drivers if props.js fails to load.                   */
+  function person(x, y, z, col) {
+    el('fade', 'position:absolute;left:' + (x - 6) + 'px;top:' + (y - 4.5) +
+               'px;width:12px;height:9px;border-radius:5px;' +
+               'background:rgba(50,56,62,.55);transform:translateZ(' + z + 'px)', zGalleria);
+    el('fade', 'position:absolute;left:' + (x - 3.5) + 'px;top:' + (y - 6) +
+               'px;width:7px;height:7px;border-radius:50%;background:' + col +
+               ';box-shadow:0 0 0 1px rgba(20,26,32,.32);transform:translateZ(' +
+               (z + 4) + 'px)', zGalleria);
+  }
+
+  /* --- six rigs: 3 along the north edge, 3 along the south edge ----------- */
+  var RIG_W = 34, RIG_D = 22, RIG_H = 16;
+  var helm = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a'];
+  var rigs = [
+    { x: 12,  y: 6,   n: true  }, { x: 68,  y: 6,   n: true  }, { x: 124, y: 6,   n: true  },
+    { x: 12,  y: 152, n: false }, { x: 68,  y: 152, n: false }, { x: 124, y: 152, n: false }
+  ];
+  rigs.forEach(function (r, i) {
+    box(zGalleria, r.x, r.y, RIG_W, RIG_D, RIG_H);
+    /* driver screen hinges off the rig's TRACK-FACING edge so all six screens
+       look inward at the circuit */
+    var s = el('fade', 'position:absolute;left:' + (r.x + 5) + 'px;top:' +
+      (r.n ? r.y + RIG_D : r.y - 15) + 'px;width:24px;height:15px;' +
+      'transform-origin:50% ' + (r.n ? '0%' : '100%') + ';' +
+      'transform:rotateX(' + (r.n ? 90 : -90) + 'deg);transform-style:preserve-3d', zGalleria);
     s.style.setProperty('--accent', '#3f7fd6');
     el('glowpanel', '', s);
-  }
-  var cx = 90, cy = 122, rx = 66, ry = 32;
-  var d = 'M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx + rx) + ' ' + cy +
-          ' A ' + rx + ' ' + ry + ' 0 1 0 ' + (cx - rx) + ' ' + cy + ' Z';
+    person(r.x + RIG_W / 2, r.y + RIG_D / 2, RIG_H + 0.4, helm[i]);
+  });
+
+  /* --- the circuit: a touge, not an oval ---------------------------------
+     One closed pass of S-curves with a hairpin at each end, laid inside the
+     band the rigs leave free (y 34-146). Deliberately narrow (12px) so the
+     switchbacks stay legible at zone zoom.                                  */
+  var d = 'M 30 60 C 38 45, 62 38, 80 54 C 92 66, 106 68, 118 56 ' +
+          'C 132 42, 162 46, 163 68 C 164 90, 138 86, 130 100 ' +
+          'C 122 112, 130 128, 110 133 C 90 138, 84 120, 66 118 ' +
+          'C 48 116, 46 134, 32 129 C 16 124, 13 100, 22 82 ' +
+          'C 25 74, 26 70, 30 60 Z';
+
+  /* green terrain patches hugging the OUTSIDE of the curves — the cheapest
+     honest hint of a hillside without modelling any relief */
+  [[4, 34, 28, 20], [144, 30, 34, 18], [168, 76, 12, 30],
+   [72, 136, 44, 12], [2, 98, 12, 34]].forEach(function (t) {
+    rect(zGalleria, '', t[0], t[1], t[2], t[3],
+      'background:rgba(126,168,124,.34);border-radius:8px;transform:translateZ(5.4px)');
+  });
+
   var svg = svgNS('svg', { width: 380, height: 180, viewBox: '0 0 380 180',
     style: 'position:absolute;left:0;top:0;transform:translateZ(6px)', class: 'flat' }, zGalleria);
   svg.style.background = 'none';
-  svgNS('path', { d: d, fill: 'none', stroke: '#bfd4e2', 'stroke-width': 18 }, svg);
-  svgNS('path', { d: d, fill: 'none', stroke: '#dfe7ee', 'stroke-width': 2,
-                  'stroke-dasharray': '7 8' }, svg);
-  for (var k = 0; k < 3; k++) {
-    el('rc', '--path:path("' + d + '");--dur:5.2s;--dly:' + (-k * 1.73).toFixed(2) +
-             's;transform:translateZ(9px)', zGalleria);
+  svgNS('path', { d: d, fill: 'none', stroke: '#bfd4e2', 'stroke-width': 12,
+                  'stroke-linejoin': 'round' }, svg);
+  svgNS('path', { d: d, fill: 'none', stroke: '#eef3f7', 'stroke-width': 1.4,
+                  'stroke-dasharray': '6 7' }, svg);
+  /* contour edges along the outside of the two hairpins and the west sweep */
+  ['M 6 44 Q 24 30 50 33', 'M 146 32 Q 170 42 177 64', 'M 8 106 Q 5 132 26 143']
+    .forEach(function (c) {
+      svgNS('path', { d: c, fill: 'none', stroke: '#8fb790', 'stroke-width': 1.6,
+                      opacity: '.7' }, svg);
+    });
+
+  /* six RC cars, one colour each, staggered evenly round the lap */
+  var cols = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#3b4148'];
+  for (var k = 0; k < 6; k++) {
+    el('rc', '--path:path("' + d + '");--dur:7s;--accent:' + cols[k] + ';--dly:' +
+             (-k * 1.167).toFixed(2) + 's;transform:translateZ(9px)', zGalleria);
   }
 })();
 
-/* 4B — diecast showcase stalls */
+/* 4B — diecast showcase stalls. Smaller blocks than v3, and each stall top is
+   racked with tiny multicoloured squares: shelves full of diecast cars.      */
 (function () {
-  var n = 0;
+  var SW = 40, SD = 30, SH = 18;
+  /* deliberately un-ordered so the racks read as stock, not as a pattern */
+  var PAL = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a',
+             '#34a06a', '#efa227', '#3f7fd6', '#b5563f', '#5b6068', '#c98a2e',
+             '#7d9b45', '#a8503f', '#4a7fb5', '#d0952f'];
+  var n = 0, p = 0;
   for (var r = 0; r < 2; r++) {
     for (var c = 0; c < 3; c++) {
-      var x = 206 + c * 60, y = 24 + r * 74;
-      box(zGalleria, x, y, 50, 40, 22);
-      var b = el('fade', 'position:absolute;left:' + (x + 25) + 'px;top:' + (y + 20) +
-                         'px;transform:translateZ(26px);width:0;height:0', zGalleria);
+      var x = 208 + c * 58, y = 28 + r * 72;
+      box(zGalleria, x, y, SW, SD, SH);
+      /* 4 x 3 grid of 6x4 diecast blisters sat on the stall top (z SH) */
+      for (var gy = 0; gy < 3; gy++) {
+        for (var gx = 0; gx < 4; gx++) {
+          rect(zGalleria, '', x + 4 + gx * 9, y + 5 + gy * 7, 6, 4,
+            'background:' + PAL[p++ % PAL.length] + ';border-radius:1px;' +
+            'transform:translateZ(' + (SH + 0.5) + 'px)');
+        }
+      }
+      var b = el('fade', 'position:absolute;left:' + (x + SW / 2) + 'px;top:' + (y + SD - 4) +
+                         'px;transform:translateZ(' + (SH + 4) + 'px);width:0;height:0', zGalleria);
       b.style.setProperty('--accent', '#3f7fd6');
       el('blink', '--dur:' + (5.5 + (n % 4) * 1.4).toFixed(1) + 's;--dly:' +
                   (-(n % 5) * 1.3).toFixed(1) + 's', b);
@@ -941,18 +1043,11 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
   label(gMall, 833, 542, 22, 'SG 2', 'sm det');
 })();
 
-/* ---- 3.8 OFFICIAL F1 MERCHANDISE — anchor landmark beside the Great Hall - */
-(function () {
-  /* props.js builders take a CENTRE point; merchStall is ~60 x 30 */
-  var mx = 912, my = 512;
-  var stall = prop('merchStall');
-  if (stall) stall(gMall, mx, my, 0);
-  else {
-    box(gMall, mx - 28, my + 3, 56, 10, 14, '--faceT:#d8cfee;--faceA:#c6bbe0;--faceB:#cec4e6');
-    box(gMall, mx - 28, my - 15, 56, 6, 34, '--faceT:#cfc3ea;--faceA:#bdb0d8;--faceB:#c5b9e0');
-  }
-  label(gMall, mx, my - 26, 46, 'Official F1 Merchandise', 'sm anchor');
-})();
+/* ---- 3.8 (v4) OFFICIAL F1 MERCHANDISE moved INSIDE the Great Hall --------
+   The merchandise is not a separate booth on the spine — it IS what the
+   octagon is used for. The stall and its anchor label are built in 3.9, on
+   the octagon footprint. This slot is intentionally empty; the spine here is
+   now just faded retail like the rest of the run.                           */
 
 /* ---- 3.9 THE GREAT HALL — octagonal pad + pyramid ------------------------ */
 (function () {
@@ -976,7 +1071,18 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
     var arm = el('arm', 'transform:rotateZ(' + (i * 90) + 'deg)', p);
     el('face', '--slant:' + slant.toFixed(1) + 'px;--tilt:' + tilt.toFixed(1) + 'deg', arm);
   }
-  label(gMall, cx, cy, 30, 'The Great Hall');
+
+  /* v4: the octagon is the MERCHANDISE hall. The "The Great Hall" label is
+     gone — the octagon is labelled by what happens in it — and the merchStall
+     prop now sits on the octagon footprint, south of centre so the anchor
+     label above it never lands on the counter. */
+  var stall = prop('merchStall');
+  if (stall) stall(gMall, cx, cy + 23, 0);
+  else {
+    box(gMall, cx - 28, cy + 26, 56, 10, 14, '--faceT:#d8cfee;--faceA:#c6bbe0;--faceB:#cec4e6');
+    box(gMall, cx - 28, cy +  8, 56,  6, 34, '--faceT:#cfc3ea;--faceA:#bdb0d8;--faceB:#c5b9e0');
+  }
+  label(gMall, cx, cy - 22, 30, 'Official F1 Merchandise', 'anchor');
 })();
 
 /* ---- 3.10 North Galleria — faded far-east context ------------------------ */
@@ -989,7 +1095,7 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
 /* ---- 3.11 LIFT LOBBY A on Level 1 — the level link ----------------------- */
 var liftL1 = (function () {
-  rect(gLiftL1, 'liftring', LOBBY.x - 26, LOBBY.y - 24, LOBBY.w + 52, LOBBY.h + 48, '');
+  rect(gLiftL1, 'liftring', LOBBY.x - 21, LOBBY.y - 19, LOBBY.w + 42, LOBBY.h + 38, '');
   var b = box(gLiftL1, LOBBY.x, LOBBY.y, LOBBY.w, LOBBY.h, LOBBY.z,
               '--faceT:#dae3f2;--faceA:#c3cee0;--faceB:#ccd6e6');
   b.classList.add('liftlink');
@@ -1023,21 +1129,46 @@ label(gB1ctx, 980, 292, 6, 'B1 Car Park', 'sm det');
    Ed's purple L. Local (0,0) = world (80,300).
      horizontal arm : local x 0-470, y 0-150   (TOP edge, motorcycle corner)
      vertical arm   : local x 0-150, y 150-365 (WEST edge)
-   The loop road is a single closed circuit traced round the L.              */
+   v4: the plain perimeter loop is replaced by a real drift COURSE inside the
+   SAME L footprint — one single closed, self-intersecting path.             */
 zDrift.style.setProperty('--accent', '#efa227');
 rect(zDrift, 'driftfloor', 0,   0, 470, 150, 'transform:translateZ(2px)');
 rect(zDrift, 'driftfloor', 0, 150, 150, 215, 'transform:translateZ(2px)');
 
+/* ---- THE COURSE ---------------------------------------------------------
+   Read it in travel order from the crossing point X (220,75):
+
+     1  X -> (384,75) -> X      the figure-8's RIGHT loop, over the top and
+                                back under, filling the east of the horiz arm
+     2  X -> (50,75)            the figure-8's LEFT loop, upper half
+     3  (50,75) -> (20,270)     transit SOUTH down the west side of the
+                                vertical arm
+     4  three r55 semicircle arcs at centre (75,270): W->E under, E->W over,
+                                W->E under = ONE AND A HALF laps of the DONUT
+                                circle. Entered heading south, left heading
+                                north, so there is no cusp at either end.
+     5  (130,270) -> (122,150)  transit NORTH back up the east side of the arm
+     6  -> (180,104) -> X       closes the LEFT loop's lower half
+
+   Steps 2/3/5/6 together are the left loop, so the two loops genuinely CROSS
+   at X and the course reads as a figure-8 over a donut rather than as a
+   lap-and-a-detour. Everything stays inside the L: x 5..399 after the 30px
+   stroke (the motorcycle park starts at 404) and y 19..340.                 */
 var DRIFT_PATH =
-  'M 60 30 L 350 30 Q 380 30 380 60 L 380 90 Q 380 120 350 120 ' +
-  'L 150 120 Q 120 120 120 150 L 120 300 Q 120 330 90 330 ' +
-  'L 60 330 Q 30 330 30 300 L 30 60 Q 30 30 60 30 Z';
+  'M 220 75 C 300 20, 384 20, 384 75 C 384 130, 300 130, 220 75 ' +
+  'C 140 20, 50 20, 50 75 C 44 108, 30 140, 24 190 C 20 220, 20 245, 20 270 ' +
+  'A 55 55 0 0 0 130 270 A 55 55 0 0 0 20 270 A 55 55 0 0 0 130 270 ' +
+  'C 130 230, 126 185, 122 150 C 118 120, 150 118, 180 104 ' +
+  'C 200 96, 208 82, 220 75 Z';
 (function () {
   var svg = svgNS('svg', { width: 470, height: 365, viewBox: '0 0 470 365',
     style: 'position:absolute;left:0;top:0;transform:translateZ(3px)', class: 'flat' }, zDrift);
   svg.style.background = 'none';
-  svgNS('path', { d: DRIFT_PATH, fill: 'none', stroke: '#c0c3c6', 'stroke-width': 40,
-                  'stroke-linejoin': 'round' }, svg);
+  /* road stroke FOLLOWS the same single path. Narrowed 40 -> 30 so the
+     figure-8 crossing and the donut's entry/exit lanes stay legible instead
+     of merging into one grey mass. */
+  svgNS('path', { d: DRIFT_PATH, fill: 'none', stroke: '#c0c3c6', 'stroke-width': 30,
+                  'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
   svgNS('path', { d: DRIFT_PATH, fill: 'none', stroke: '#d8dadc', 'stroke-width': 1.5,
                   'stroke-dasharray': '10 12' }, svg);
 
@@ -1048,48 +1179,71 @@ var DRIFT_PATH =
     fill: 'none', stroke: '#efa227', 'stroke-width': 2.5, 'stroke-linejoin': 'round',
     opacity: '.9' }, gsvg);
 
-  /* 3 karts, each with 4 trail ghosts. Negative delays: the lead kart carries
-     the largest negative delay so its ghosts sit behind it on the path.     */
-  var kartPhase = [0, 3.0, 6.0];            /* seconds apart on a 9s loop */
-  var ghost     = [0, .10, .20, .30];       /* trail stagger, seconds     */
+  /* SIX karts, each with 4 trail ghosts, staggered evenly round the lap.
+     Negative delays: the lead kart carries the largest negative delay so its
+     ghosts sit behind it on the path.
+
+     SPEED: the course is ~1534px against v3's ~1222px perimeter loop. v3 ran
+     9s => ~136 px/s. The target here is ~60% of that ground speed (~81 px/s),
+     so the lap is 19s (and 13.4s when the zone is active — see the CSS). The
+     karts therefore cover more course but read noticeably slower.
+     The ghost stagger is scaled with the lap so the trail keeps its v3 length
+     in PIXELS rather than collapsing onto the kart.                          */
+  var KART_DUR  = 19;                       /* must match the .kart CSS --dur */
+  var kartAcc   = ['#efa227', '#3f7fd6', '#c8443a', '#3f9d6d', '#8a6bc4', '#d9564a'];
+  var kartHelm  = ['#f4f7f9', '#ffd873', '#eef1f3', '#ffd2dc', '#cfeaff', '#fff0c2'];
+  var ghost     = [0, .17, .34, .51];       /* trail stagger, seconds     */
   var cls       = ['lead', 't1', 't2', 't3'];
-  /* the kart plane is lifted clear of the 40px road stroke (z 3) so the karts
+  var DRV       = '<i class="drv-s"></i><i class="drv-h"></i>';
+  /* the kart plane is lifted clear of the 30px road stroke (z 3) so the karts
      and their trails always read on top of the tarmac */
-  for (var k = 0; k < 3; k++) {
-    var set = el('kartset', 'transform:translateZ(6px)', zDrift);
+  for (var k = 0; k < 6; k++) {
+    var set   = el('kartset', 'transform:translateZ(6px)', zDrift);
+    var phase = k * (KART_DUR / 6);
+    var tint  = ';--drift:' + (16 + k * 3) + 'deg;--accent:' + kartAcc[k] +
+                ';--helm:' + kartHelm[k];
     for (var g = 3; g >= 0; g--) {
       el('kart ' + cls[g],
-        '--path:path("' + DRIFT_PATH + '");--dly:' + (-(kartPhase[k] + 1.2 - ghost[g])).toFixed(2) +
-        's;--drift:' + (18 + k * 4) + 'deg', set);
+        '--path:path("' + DRIFT_PATH + '");--dly:' + (-(phase + 1.2 - ghost[g])).toFixed(2) +
+        's' + tint, set).innerHTML = DRV;
     }
     el('kart t4',
-      '--path:path("' + DRIFT_PATH + '");--dly:' + (-(kartPhase[k] + 1.2 - .40)).toFixed(2) +
-      's;--drift:' + (18 + k * 4) + 'deg', set);
+      '--path:path("' + DRIFT_PATH + '");--dly:' + (-(phase + 1.2 - .68)).toFixed(2) +
+      's' + tint, set).innerHTML = DRV;
   }
 })();
 /* motorcycle park corner, east end of the horizontal arm */
 rect(zDrift, 'mcpark', 404, 16, 60, 118, 'transform:translateZ(3px)');
 label(zDrift, 434, 146, 6, 'Motorcycle park', 'sm det');
 label(zDrift, 200, -34, 10, 'Dorifto Zone');
-label(zDrift, 62, 190, 8, '3 karts · timed laps', 'sm det');
+label(zDrift,  75, 270, 8, 'Donut circle', 'sm det');      /* inside the donut */
+label(zDrift,  75, 352, 8, '6 karts · timed laps', 'sm det');
 
 /* ---- 3.14 CAR DISPLAY & LOUNGE (zone) ----------------------------------
-   Local (0,0) = world (85,465).
-     lounge     : local x 5-170,   y 205-323  (south of the L's vertical arm)
-     car pads   : local x 182-338, y 36-264   (east of the lounge)           */
+   v4 rework. Local (0,0) = world (85,585) — the zone was 355 x 330 from
+   world y 465; it is now 355 x 215 from world y 585.
+     lounge     : local x 5-170,   y 85-203   (south of the L's vertical arm)
+     car pads   : local x 188-347, y 25-185   (east of the lounge)
+
+   WHY: the display sprawled over the whole western half of the pad with four
+   cars up north and only two down east. All SIX now sit in one consolidated
+   block on the eastern pad — modestly extended north/south to take three
+   rows — and the old western/northern part is out of the zone entirely, so
+   it reads as open clear car-park floor rather than as an empty activation
+   area with a glow round it.                                                */
 zDisplay.style.setProperty('--accent', '#34a06a');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zDisplay);
-label(zDisplay, 175, 348, 10, 'Car Display & Lounge');
+label(zDisplay, 175, 228, 10, 'Car Display & Lounge');
 
 /* six display pads at jaunty angles, each with a placeholder supercar */
 (function () {
   var pads = [
-    { x: 215, y:  55, r: -14, c: '#c8443a' },
-    { x: 305, y:  52, r:  11, c: '#2f6fc4' },
-    { x: 215, y: 150, r:  22, c: '#e0a72a' },
-    { x: 305, y: 148, r:  -8, c: '#3f9d6d' },
-    { x: 215, y: 245, r:  15, c: '#8a6bc4' },
-    { x: 305, y: 243, r: -20, c: '#3b4148' }
+    { x: 225, y:  48, r: -14, c: '#c8443a' },
+    { x: 310, y:  46, r:  11, c: '#2f6fc4' },
+    { x: 225, y: 105, r:  22, c: '#e0a72a' },
+    { x: 310, y: 103, r:  -8, c: '#3f9d6d' },
+    { x: 225, y: 162, r:  15, c: '#8a6bc4' },
+    { x: 310, y: 160, r: -20, c: '#3b4148' }
   ];
   var car = prop('supercar');
   /* props build from z 0 up; the cars ride a layer lifted clear of their pads
@@ -1103,27 +1257,38 @@ label(zDisplay, 175, 348, 10, 'Car Display & Lounge');
     else box(carLayer, p.x - 23, p.y - 11, 46, 22, 13,
              'transform:rotateZ(' + p.r + 'deg);--faceT:' + p.c);
   });
-  label(zDisplay, 260, 22, 8, 'Six feature cars', 'sm det');
+  label(zDisplay, 267, 10, 8, 'Six feature cars', 'sm det');
 })();
 
-/* rest area / lounge — chill and wait for the Dorifto queue */
+/* rest area / lounge — chill and wait for the Dorifto queue.
+   v4: no low / standing tables, roughly double the chairs arranged as two
+   informal clusters round the parasols, plus a beverage cart on the north
+   edge where people arriving from the display walk in.                      */
 (function () {
-  rect(zDisplay, 'loungepad', 5, 205, 165, 118, 'transform:translateZ(4px)');
-  var chair = prop('loungeChair'), para = prop('parasol');
+  rect(zDisplay, 'loungepad', 5, 85, 165, 118, 'transform:translateZ(4px)');
+  var chair = prop('loungeChair'), para = prop('parasol'), cart = prop('beverageCart');
   var layer = el('', 'position:absolute;left:0;top:0;width:100%;height:100%;' +
                      'transform-style:preserve-3d;transform:translateZ(5px)', zDisplay);
-  var seats = [[32, 238, -8], [70, 236, 6], [108, 240, -4], [140, 238, 10]];
+  /* two loose clusters of four — angles deliberately unequal so they read as
+     chairs people have dragged around, not as a seating plan */
+  var seats = [[26, 128, -16], [54, 122,  12], [30, 162, -28], [64, 170,   8],
+               [96, 130,  -6], [124, 124,  20], [100, 166, -24], [146, 174,  4]];
   seats.forEach(function (s) {
     if (chair) chair(layer, s[0], s[1], s[2]);
     else box(layer, s[0] - 8, s[1] - 7, 16, 14, 9,
              'transform:rotateZ(' + s[2] + 'deg);--faceT:#c2c8cc');
   });
-  [[46, 292], [130, 288]].forEach(function (p) {
+  [[46, 172], [130, 168]].forEach(function (p) {
     if (para) para(layer, p[0], p[1]);
     else box(layer, p[0] - 9, p[1] - 9, 18, 18, 30,
              '--faceT:#cbd2d7;--faceA:#b6bec4;--faceB:#c0c7cd');
   });
-  label(zDisplay, 87, 196, 8, 'Rest area · lounge', 'sm det');
+  if (cart) cart(layer, 140, 102, -6);
+  else {
+    box(layer, 123, 96, 34, 12, 13, '--faceT:#e0e4e7;--faceA:#c1c7cc;--faceB:#ccd1d6');
+    box(layer, 123, 91, 34, 22, 30, '--ol:.35;--faceT:#ded2bd');
+  }
+  label(zDisplay, 87, 76, 8, 'Rest area · lounge', 'sm det');
 })();
 
 /* lounge + display crowd dots */
@@ -1131,7 +1296,7 @@ label(zDisplay, 175, 348, 10, 'Car Display & Lounge');
   var rnd = rnder(91);
   for (var i = 0; i < 14; i++) {
     /* kept east of the Dorifto zone's vertical arm so nobody stands on the road */
-    var w = el('dotwrap', 'left:' + (176 + rnd() * 168) + 'px;top:' + (18 + rnd() * 300) +
+    var w = el('dotwrap', 'left:' + (176 + rnd() * 168) + 'px;top:' + (8 + rnd() * 196) +
                           'px;transform:translateZ(6px)', zDisplay);
     el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
   }
@@ -1139,14 +1304,14 @@ label(zDisplay, 175, 348, 10, 'Car Display & Lounge');
 
 /* ---- 3.15 LIFT LOBBY A on B1 — directly under the L1 lobby -------------- */
 var liftB1 = (function () {
-  rect(gLiftB1, 'liftring', LOBBY.x - 26, LOBBY.y - 24, LOBBY.w + 52, LOBBY.h + 48, '');
-  var b = box(gLiftB1, LOBBY.x, LOBBY.y, LOBBY.w, LOBBY.h, 40,
+  rect(gLiftB1, 'liftring', LOBBY.x - 21, LOBBY.y - 19, LOBBY.w + 42, LOBBY.h + 38, '');
+  var b = box(gLiftB1, LOBBY.x, LOBBY.y, LOBBY.w, LOBBY.h, 32,
               '--faceT:#dae3f2;--faceA:#c3cee0;--faceB:#ccd6e6');
   b.classList.add('liftlink');
   b.setAttribute('role', 'button');
   b.setAttribute('tabindex', '0');
   b.setAttribute('aria-label', 'Lift Lobby A — switch to Level 1');
-  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y - 18, 50, 'Lift Lobby A', 'sm');
+  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y - 18, 42, 'Lift Lobby A', 'sm');
   label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h + 18, 6, 'tap to change level', 'sm det');
   return b;
 })();
@@ -1229,6 +1394,10 @@ function nearestAngle(target, from_) {
 }
 
 function flyTo(kf) {
+  /* a flight always wins over a hand-thrown coast, and re-arms the preset
+     highlight that free orbiting switched off */
+  momActive = false;
+  freeOrbit = false;
   from = { tx: cur.tx, ty: cur.ty, scale: cur.scale, rz: cur.rz, rx: cur.rx };
   to   = resolve(kf);
   to.rz = nearestAngle(to.rz, cur.rz);
@@ -1247,11 +1416,24 @@ function frame(now) {
     cur.scale = from.scale + (to.scale - from.scale) * e;
     cur.rz    = from.rz    + (to.rz    - from.rz)    * e;
     cur.rx    = from.rx    + (to.rx    - from.rx)    * e;
+  } else if (momActive) {
+    /* post-release coast: decay the thrown angular velocity to zero over
+       MOMENTUM_MS on a squared ease-out, integrated against REAL frame time
+       so the throw feels the same at 60Hz and 120Hz. */
+    var mp  = (now - momT0) / MOMENTUM_MS;
+    var mdt = now - momLast;
+    momLast = now;
+    if (mp >= 1) { momActive = false; }
+    else {
+      var mk = (1 - mp) * (1 - mp);
+      cur.rz  = cur.rz + momVZ * mk * mdt;
+      cur.rx  = clampRX(cur.rx + momVX * mk * mdt);
+    }
   }
   /* idle breathing rides on top of the tweened scale, never replaces it.
-     breathK is damped to 0 while drag-orbiting so the jitter cannot fight
-     the pointer.                                                            */
-  breathK += ((dragMoved ? 0 : 1) - breathK) * 0.10;
+     breathK is damped to 0 for the whole drag AND the coast that follows it,
+     so the jitter can never fight the hand.                                 */
+  breathK += (((dragMoved || momActive) ? 0 : 1) - breathK) * 0.10;
   var breath = 1 + BREATHE_AMP * 0.5 * breathK *
                (1 - Math.cos(2 * Math.PI * (now % BREATHE_PERIOD) / BREATHE_PERIOD));
 
@@ -1395,6 +1577,8 @@ function syncViewBtns() {
 function applyView(id) {
   var v = VIEWS[id];
   if (!v) return;
+  momActive = false;
+  freeOrbit = false;
   var targetRz = (v.rz === null) ? cur.rz : nearestAngle(v.rz, cur.rz);
   from = { tx: cur.tx, ty: cur.ty, scale: cur.scale, rz: cur.rz, rx: cur.rx };
   to   = { tx: cur.tx, ty: cur.ty, scale: cur.scale, rz: targetRz, rx: v.rx };
@@ -1407,35 +1591,86 @@ viewBtns.forEach(function (b) {
 });
 
 /* ==========================================================================
-   8.  DRAG TO ORBIT
+   8.  DRAG TO ORBIT  (v4 — fluid, two-axis, with momentum)
    --------------------------------------------------------------------------
-   Horizontal drag / swipe on the stage spins rz 1:1 (0.35deg per px). No
-   inertia, no snap back — the preset buttons are the re-normalise. A 6px
-   threshold has to be crossed before the gesture counts as a drag, so taps
-   still select. A mostly-vertical first move abandons the gesture.
+   v3 was "dead locked": horizontal only, 0.35deg/px, hard stop on release,
+   and a mostly-vertical first move killed the gesture outright. Now:
+
+     a  horizontal drag spins rz at 0.45deg/px
+     b  vertical drag tilts rx at 0.30deg/px, CLAMPED to 22..70deg so the
+        world can never be dragged past a plan view or below the horizon.
+        Drag UP to stand the camera up (rx grows), same sense as a map app.
+     c  releasing carries the angular velocity and decays it to zero over
+        MOMENTUM_MS (600ms) on a squared ease-out, so the world coasts
+     d  grab / grabbing cursors, desktop only (see the CSS media query)
+     e  the gesture starts ANYWHERE on the stage, including on top of the
+        world and on the lift lobby. It still has to clear DRAG_THRESHOLD
+        (6px, either axis) before it counts, so taps are never stolen, and
+        #hud / #card / #views are excluded outright
+     f  idle breathing is damped to zero for the whole drag AND coast, so it
+        never fights the hand (see frame())
+     g  once the user has orbited by hand, NO view preset is shown as active
+        until one is actually pressed (freeOrbit, cleared by flyTo/applyView)
    ========================================================================== */
-var DRAG_DEG_PER_PX = 0.35, DRAG_THRESHOLD = 6;
+var DRAG_DEG_PER_PX = 0.45;      /* rz: horizontal */
+var DRAG_RX_PER_PX  = 0.30;      /* rx: vertical   */
+var DRAG_THRESHOLD  = 6;
+var RX_MIN = 22, RX_MAX = 70, MOMENTUM_MS = 600;
+var VEL_SMOOTH = 0.35;           /* new-sample weight in the velocity filter */
+var VEL_MIN    = 0.004;          /* deg/ms below which a release is a stop   */
+
 var dragActive = false, dragMoved = false, dragId = null;
-var dragX0 = 0, dragY0 = 0, dragRZ0 = 0, suppressClick = false;
+var dragX0 = 0, dragY0 = 0, dragRZ0 = 0, dragRX0 = 0, suppressClick = false;
+var lastPX = 0, lastPY = 0, lastPT = 0, velRZ = 0, velRX = 0;
+var momActive = false, momT0 = 0, momLast = 0, momVZ = 0, momVX = 0;
+var freeOrbit = false;           /* user has orbited by hand since the last preset/chip */
+
+/* The Bird's-eye preset parks rx at 16, BELOW the drag floor. Clamping hard to
+   RX_MIN would pop the world on the first vertical move out of that pose, so
+   each gesture takes its floor from wherever it started. Normal orbiting still
+   lives in 22..70; only a pose that was already flatter keeps its own floor. */
+var rxFloor = RX_MIN;
+function clampRX(v) { return v < rxFloor ? rxFloor : (v > RX_MAX ? RX_MAX : v); }
+function stopMomentum() { momActive = false; }
 
 stage.addEventListener('pointerdown', function (e) {
   if (e.button && e.button !== 0) return;
   if (e.target.closest('#hud') || e.target.closest('#card') || e.target.closest('#views')) return;
+  stopMomentum();
   dragActive = true; dragMoved = false; dragId = e.pointerId;
-  dragX0 = e.clientX; dragY0 = e.clientY; dragRZ0 = cur.rz;
+  dragX0 = lastPX = e.clientX;
+  dragY0 = lastPY = e.clientY;
+  dragRZ0 = cur.rz; dragRX0 = cur.rx;
+  rxFloor = Math.min(RX_MIN, cur.rx);
+  lastPT = performance.now();
+  velRZ = velRX = 0;
 });
 stage.addEventListener('pointermove', function (e) {
   if (!dragActive || e.pointerId !== dragId) return;
   var dx = e.clientX - dragX0, dy = e.clientY - dragY0;
   if (!dragMoved) {
+    /* threshold on EITHER axis — v3 abandoned the gesture on a vertical lead,
+       which is what made the tilt feel non-existent */
     if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
-    if (Math.abs(dx) <= Math.abs(dy)) { dragActive = false; return; }   /* vertical: ignore */
     dragMoved = true;
+    freeOrbit = true;
     tweening = false;
     document.body.classList.add('dragging');
     try { stage.setPointerCapture(dragId); } catch (err) {}
   }
+  /* instantaneous velocity in deg/ms, low-pass filtered so one jittery
+     sample at release cannot fling the world */
+  var now = performance.now(), dt = now - lastPT;
+  if (dt > 0) {
+    var iz =  (e.clientX - lastPX) * DRAG_DEG_PER_PX / dt;
+    var ix = -(e.clientY - lastPY) * DRAG_RX_PER_PX  / dt;
+    velRZ = velRZ * (1 - VEL_SMOOTH) + iz * VEL_SMOOTH;
+    velRX = velRX * (1 - VEL_SMOOTH) + ix * VEL_SMOOTH;
+    lastPX = e.clientX; lastPY = e.clientY; lastPT = now;
+  }
+  /* absolute mapping from the gesture origin: no drift, no accumulated error */
   cur.rz = dragRZ0 + dx * DRAG_DEG_PER_PX;
+  cur.rx = clampRX(dragRX0 - dy * DRAG_RX_PER_PX);
   syncViewBtns();
 });
 function endDrag() {
@@ -1444,6 +1679,12 @@ function endDrag() {
   if (dragMoved) {
     suppressClick = true;
     setTimeout(function () { suppressClick = false; }, 0);
+    /* coast: hand the filtered velocity to the frame loop to decay */
+    if (Math.abs(velRZ) > VEL_MIN || Math.abs(velRX) > VEL_MIN) {
+      momVZ = velRZ; momVX = velRX;
+      momT0 = momLast = performance.now();
+      momActive = true;
+    }
   }
   dragMoved = false;
   document.body.classList.remove('dragging');
@@ -1453,11 +1694,12 @@ stage.addEventListener('pointerup', endDrag);
 stage.addEventListener('pointercancel', endDrag);
 stage.addEventListener('lostpointercapture', endDrag);
 
-/* while dragging, syncViewBtns reads `to`; force it to read live state */
+/* Once the world has been orbited by hand it matches no preset, so the
+   cluster shows nothing active until a preset (or a chip) is pressed. */
 (function patchSync() {
   var orig = syncViewBtns;
   syncViewBtns = function () {
-    if (dragMoved) { setViewBtn(null); return; }
+    if (freeOrbit) { setViewBtn(null); return; }
     orig();
   };
 })();
@@ -1475,10 +1717,12 @@ function showShaft() {
     shaft = el('shaft', 'position:absolute;left:0;top:0;width:0;height:0;' +
                         'transform-style:preserve-3d', gLink);
     var cx = LOBBY.x + LOBBY.w / 2, cy = LOBBY.y + LOBBY.h / 2;
-    box(shaft, cx - 17, cy - 17, 34, 34, 238,
+    /* core + halo scaled with the v4 80% lobby block so the shaft still lands
+       inside the smaller footprint */
+    box(shaft, cx - 14, cy - 14, 28, 28, 238,
         'transform:translateZ(-106px);--faceT:rgba(96,150,235,.55);' +
         '--faceA:rgba(96,150,235,.30);--faceB:rgba(96,150,235,.42)');
-    box(shaft, cx - 33, cy - 33, 66, 66, 232,
+    box(shaft, cx - 27, cy - 27, 54, 54, 232,
         'transform:translateZ(-103px);--faceT:rgba(96,150,235,.13);' +
         '--faceA:rgba(96,150,235,.08);--faceB:rgba(96,150,235,.11)');
   }
@@ -1556,7 +1800,7 @@ if (mqDesktop.addEventListener) {
 
 <!--
 ================================================================================
-MANUAL QA CHECKLIST — TRACKSIDE motion prototype (v3, floor-plan rebuild)
+MANUAL QA CHECKLIST — TRACKSIDE motion prototype (v4, client revision pass)
 ================================================================================
 Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 6 on a
 390 x 844 viewport first, then repeat on desktop.
@@ -1569,10 +1813,11 @@ Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 6 on a
  2. FLOOR-PLAN READ — at overview the site reads as Ed's plan: south entrance
     and taxi stand at the far WEST, the indoor spine running west to east,
     South Galleria 4A + 4B on the spine near the west end, Lift Lobby A on the
-    spine's south side about a third along, the Great Hall octagon with its
-    pyramid at the east end with the Official F1 Merchandise anchor beside it,
-    and Monument Square outdoors to the NORTH-EAST. Retail units stay faded and
-    unnumbered; activation zones pop.
+    spine's south side about HALFWAY along (v4: it moved east), the octagon
+    with its pyramid at the east end labelled OFFICIAL F1 MERCHANDISE with the
+    merch stall standing inside it, and Monument Square outdoors to the
+    NORTH-EAST. There is no "The Great Hall" label and no separate merch booth
+    on the spine. Retail units stay faded and unnumbered; zones pop.
  3. LEGEND SWEEP — tap chips 1 to 5 in order, then back. Flights are ~1.1s on
     touch and ~1.6s on desktop, eased, and every pose visibly changes pan, zoom
     AND angle (a drone move, never a slide or a snap). Zones fill the frame.
@@ -1589,31 +1834,67 @@ Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 6 on a
     OPPOSITE faces of every box are the ones drawn — check no box turns hollow or
     inside out at any point of the transition, including the moment it crosses
     rz 0. Selecting a chip re-normalises the angle and the preset highlight.
- 7. DRAG TO ORBIT — drag horizontally on the stage with a mouse and with a
-    finger. The world spins ~0.35deg per px, follows 1:1, does NOT snap back on
-    release and does not carry inertia. Vertical drags do nothing. A short tap
-    (under 6px) still returns to overview or selects the lobby. Box side faces
-    keep swapping correctly all the way round 360deg. The idle breathing stops
-    while dragging and eases back in afterwards.
+ 7. DRAG TO ORBIT (v4 — the big interaction change) — with a mouse and with a
+    finger, and starting the gesture ANYWHERE on the stage including directly
+    on top of the world and on the lift lobby block:
+      a  horizontal drag spins rz at ~0.45deg/px and follows the hand 1:1
+      b  vertical drag TILTS: rx follows at ~0.30deg/px, drag up to stand the
+         camera up. It must stop dead at 22deg and at 70deg — keep dragging
+         past the clamp and nothing further happens, no snap, no overshoot
+      c  flick and let go: the world COASTS and comes to rest in ~600ms. A
+         slow release with no speed must not coast at all
+      d  desktop only: the cursor is `grab`, and `grabbing` while dragging.
+         No cursor change on touch
+      e  a short tap (under 6px on both axes) still returns to overview or
+         fires the lobby link — the drag must never steal a tap. Dragging
+         from the HUD panel, the info card or the preset cluster must NOT
+         orbit the world
+      f  breathing stops for the whole drag AND the coast, then eases back
+      g  after any hand orbit, NO preset button is highlighted until one is
+         pressed. Pressing a chip or a preset re-arms the highlight
+    Box side faces keep swapping correctly all the way round 360deg of rz.
  8. LIFT LOBBY A LEVEL LINK — tap the lobby on L1: x-ray turns on, the camera
     flies to the B1 lobby, and a glowing vertical shaft flashes at the lobby and
     fades over ~0.9s. Tap the B1 lobby: it comes straight back up to L1. Works
     from any starting pose, in both directions, repeatedly. The lobby shows a
     pointer cursor and a slow pulse ring on both levels.
  9. LABEL PASS — at overview zoom on 390px, only these labels are readable and
-    none of them collide: Millenia Walk, South Galleria 4A + 4B, The Great Hall,
-    Monument Square, plus Dorifto Zone and Car Display & Lounge in x-ray. Every
-    other label stays hidden until a zone pose crosses the z-near threshold.
+    none of them collide: Millenia Walk, South Galleria 4A + 4B, Official F1
+    Merchandise, Monument Square, plus Dorifto Zone and Car Display & Lounge in
+    x-ray. Every other label stays hidden until a zone pose crosses the z-near
+    threshold — including the new "Donut circle" and "6 karts · timed laps".
     Labels stay horizontal and upright at EVERY preset and at any dragged rz.
 10. PROPS FALLBACK — rename props.js and reload. The page must still build: the
-    six B1 display cars, lounge chairs, parasols, Monument Square planter trees,
-    B1 pillars and the F1 merch stall fall back to plain grey boxes and nothing
-    throws in the console.
+    six B1 display cars, the eight lounge chairs, parasols, the BEVERAGE CART,
+    Monument Square planter trees, B1 pillars and the F1 merch stall (now inside
+    the octagon) fall back to plain grey boxes and nothing throws in the console.
+    The 4A rig drivers and the kart drivers are NOT props and must survive.
 11. IDLE LIFE — leave it 30s on any pose: the world keeps breathing (scale 1.000
-    to 1.006 over 6s), karts keep drifting the L-loop with trails, RC cars keep
-    lapping on both the Monument Square track and the 4A circuit, crowd dots keep
+    to 1.006 over 6s), karts keep drifting the course with trails, RC cars keep
+    lapping on both the Monument Square track and the 4A touge, crowd dots keep
     pulsing. Rotate the phone to landscape and back: layout reflows, the dock
     stays compact, the camera reframes.
+12. DORIFTO COURSE (v4) — the road is no longer a plain L perimeter. Inside the
+    same L footprint: a DONUT circle in the south of the vertical arm, a transit
+    north, a FIGURE-8 whose two loops visibly CROSS in the horizontal arm, and a
+    transit back. Road stroke and kart path are the SAME path, so no kart ever
+    runs off the tarmac — watch a full lap of each. SIX karts, evenly spaced,
+    one colour each, every one with a visible helmeted driver, all four trail
+    ghosts still following. They must read NOTICEABLY SLOWER than v3 (~60% of
+    the old ground speed) even though the course is longer. Nothing crosses into
+    the motorcycle park pad.
+13. CAR DISPLAY & LOUNGE (v4) — all SIX cars sit in one consolidated block of
+    three rows on the eastern pad; the western/northern part is open clear floor
+    with no pads, no glow and no zone outline round it. The lounge has EIGHT
+    chairs in two loose clusters, two parasols and a beverage cart, and NO low
+    or standing tables. The zone glow hugs the smaller footprint and the chip
+    flight still lands the whole thing centred on a 390px phone.
+14. SOUTH GALLERIA (v4) — 4A: SIX rigs, three along each side, each with a
+    seated person and an inward-facing screen, surrounding a WINDING mountain
+    circuit (S-curves plus hairpins, not an oval) with green terrain patches and
+    contour edges outside the curves. SIX RC cars, one colour each, staggered,
+    none of them cutting a corner off the tarmac. 4B: the stalls are smaller
+    than v3 and every one is racked with tiny multicoloured diecast squares.
 ================================================================================
 -->
 </body>
