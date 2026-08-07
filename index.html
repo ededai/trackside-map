@@ -213,11 +213,15 @@ body.z-far .lbl.sm { opacity: 0; }
 }
 .kart > i.kcp   { left: 5px; top: 2.5px; width: 12px; height: 8px; border-radius: 3px;
                   background: rgba(30,35,41,.75); transform: translateZ(6px); }
-.kart > i.drv-s { left: 7px; top: 2.5px; width: 10px; height: 8px; border-radius: 4px;
+.kart > i.drv-s { left: 6.5px; top: 2px; width: 11px; height: 9px; border-radius: 4px;
                   background: rgba(52,58,64,.92); transform: translateZ(8px); }
-.kart > i.drv-h { left: 9.5px; top: 3.5px; width: 6px; height: 6px;
+.kart > i.drv-a { width: 4px; height: 2.2px; border-radius: 1px;
+                  background: rgba(52,58,64,.92); transform: translateZ(9.5px); }
+.kart > i.drv-a.al { left: 14px; top: 3px; }
+.kart > i.drv-a.ar { left: 14px; top: 7.8px; }
+.kart > i.drv-h { left: 9px; top: 3px; width: 7px; height: 7px;
                   border-radius: 50%; background: var(--helm, #eef1f3);
-                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(11px); }
+                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(12px); }
 /* --- v5 colour trail: tapered streaks chasing each kart on the same path.
    Two segments per kart at growing lag = a fading ribbon, no box ghosts.  */
 .ktrail {
@@ -917,9 +921,10 @@ rect(zGalleria, '', 0, 0, 380, 180,
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zGalleria);
 /* the two rooms read as a pair: a light party wall between 4A and 4B */
 box(zGalleria, 183, 4, 10, 172, 28);
-/* low north / south walls; the street runs through east-west */
-box(zGalleria, 0,   0, 380, 6, 26);
-box(zGalleria, 0, 174, 380, 6, 26);
+/* low north / south walls; v6: dropped 26 -> 11 so the south rig row's seated
+   figures are never hidden behind the wall from the default camera angle */
+box(zGalleria, 0,   0, 380, 6, 11);
+box(zGalleria, 0, 174, 380, 6, 11);
 label(zGalleria, 190, -28, 44, 'South Galleria 4A + 4B');
 label(zGalleria,  90, 196,  8, '4A · MiniMe FPV', 'sm det');   /* clear of the south rig row */
 label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
@@ -927,37 +932,48 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 /* 4A — SIX MiniMe FPV rigs with seated drivers, 3 along each side, ringing a
    winding mountain-pass (touge) circuit. Six RC cars, one colour each.       */
 (function () {
-  /* seated person: shoulder pad + helmeted head disc, drawn flat on a rig top.
-     Kept local (not a props.js builder) so there is no fallback branch — 4A
-     must never lose its drivers if props.js fails to load.                   */
-  function person(x, y, z, col) {
-    el('fade', 'position:absolute;left:' + (x - 6) + 'px;top:' + (y - 4.5) +
-               'px;width:12px;height:9px;border-radius:5px;' +
-               'background:rgba(50,56,62,.55);transform:translateZ(' + z + 'px)', zGalleria);
-    el('fade', 'position:absolute;left:' + (x - 3.5) + 'px;top:' + (y - 6) +
-               'px;width:7px;height:7px;border-radius:50%;background:' + col +
-               ';box-shadow:0 0 0 1px rgba(20,26,32,.32);transform:translateZ(' +
-               (z + 4) + 'px)', zGalleria);
+  /* --- six sim-rig tableaux: low platform, glowing screen on the track edge,
+     bucket seat, and a BLOCKY SEATED FIGURE (legs, shirt torso, two arms to a
+     wheel, head) built from stacked leaves so the person reads in 3D.
+     f = +1 when the rig faces south (north row), -1 when it faces north.    */
+  var RIG_W = 34, RIG_D = 22;
+  var shirt = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a'];
+  function lf(x, y, w, h, z, extra) {
+    return el('fade', 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w +
+      'px;height:' + h + 'px;transform:translateZ(' + z + 'px);' + (extra || ''), zGalleria);
   }
-
-  /* --- six rigs: 3 along the north edge, 3 along the south edge ----------- */
-  var RIG_W = 34, RIG_D = 22, RIG_H = 16;
-  var helm = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a'];
   var rigs = [
-    { x: 12,  y: 6,   n: true  }, { x: 68,  y: 6,   n: true  }, { x: 124, y: 6,   n: true  },
-    { x: 12,  y: 152, n: false }, { x: 68,  y: 152, n: false }, { x: 124, y: 152, n: false }
+    { x: 12,  y: 6,   f:  1 }, { x: 68,  y: 6,   f:  1 }, { x: 124, y: 6,   f:  1 },
+    { x: 12,  y: 152, f: -1 }, { x: 68,  y: 152, f: -1 }, { x: 124, y: 152, f: -1 }
   ];
   rigs.forEach(function (r, i) {
-    box(zGalleria, r.x, r.y, RIG_W, RIG_D, RIG_H);
-    /* driver screen hinges off the rig's TRACK-FACING edge so all six screens
-       look inward at the circuit */
-    var s = el('fade', 'position:absolute;left:' + (r.x + 5) + 'px;top:' +
-      (r.n ? r.y + RIG_D : r.y - 15) + 'px;width:24px;height:15px;' +
-      'transform-origin:50% ' + (r.n ? '0%' : '100%') + ';' +
-      'transform:rotateX(' + (r.n ? 90 : -90) + 'deg);transform-style:preserve-3d', zGalleria);
+    var cx = r.x + RIG_W / 2, f = r.f;
+    box(zGalleria, r.x, r.y, RIG_W, RIG_D, 3, '--faceT:#c5cbd0');
+    /* screen hinges upright off the track-facing edge */
+    var s = el('fade', 'position:absolute;left:' + (r.x + 3) + 'px;top:' +
+      (f > 0 ? r.y + RIG_D : r.y - 16) + 'px;width:28px;height:16px;' +
+      'transform-origin:50% ' + (f > 0 ? '0%' : '100%') + ';' +
+      'transform:rotateX(' + (f > 0 ? 90 : -90) + 'deg);transform-style:preserve-3d', zGalleria);
     s.style.setProperty('--accent', '#3f7fd6');
     el('glowpanel', '', s);
-    person(r.x + RIG_W / 2, r.y + RIG_D / 2, RIG_H + 0.4, helm[i]);
+    /* bucket seat: pan + backrest at the rear, away from the screen */
+    var seatY = f > 0 ? r.y + 2 : r.y + RIG_D - 8;
+    box(zGalleria, cx - 5, seatY, 10, 6, 6, '--faceT:#3a4046;--faceA:#2e3338;--faceB:#34393f');
+    box(zGalleria, cx - 5, f > 0 ? seatY - 2 : seatY + 6, 10, 2, 13,
+        '--faceT:#3a4046;--faceA:#2e3338;--faceB:#34393f');
+    /* the figure: legs to the pedals, torso on the seat, arms to the wheel, head on top */
+    lf(cx - 4, f > 0 ? seatY + 5 : seatY - 7, 8, 8, 7, 'background:#4a5258;border-radius:2px');
+    lf(cx - 4, f > 0 ? seatY + 0.5 : seatY + 1.5, 8, 5, 10,
+       'background:' + shirt[i] + ';border-radius:2px');
+    lf(cx - 5, f > 0 ? seatY + 4 : seatY - 3, 2.5, 6, 11,
+       'background:' + shirt[i] + ';border-radius:1px');
+    lf(cx + 2.5, f > 0 ? seatY + 4 : seatY - 3, 2.5, 6, 11,
+       'background:' + shirt[i] + ';border-radius:1px');
+    lf(cx - 3, f > 0 ? seatY - 0.5 : seatY + 2.5, 6, 6, 15,
+       'background:#e9cfae;border-radius:2.5px;box-shadow:0 0 0 1px rgba(20,26,32,.28)');
+    /* steering wheel between the arms and the screen */
+    lf(cx - 2.5, f > 0 ? seatY + 9.5 : seatY - 5.5, 5, 5, 10,
+       'background:#23282d;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)');
   });
 
   /* --- the circuit: a touge, not an oval ---------------------------------
@@ -1217,7 +1233,8 @@ var DRIFT_PATH =
   var kartAcc   = ['#efa227', '#3f7fd6', '#c8443a', '#3f9d6d', '#8a6bc4', '#d9564a'];
   var kartHelm  = ['#f4f7f9', '#ffd873', '#eef1f3', '#ffd2dc', '#cfeaff', '#fff0c2'];
   var KART_BODY = '<i class="kb0"></i><i class="kb1"></i><i class="kcp"></i>' +
-                  '<i class="drv-s"></i><i class="drv-h"></i>';
+                  '<i class="drv-s"></i><i class="drv-a al"></i><i class="drv-a ar"></i>' +
+                  '<i class="drv-h"></i>';
   /* v5: one 3D kart + two colour-streak trail segments per kart (no ghosts).
      Trail lag is in seconds BEHIND the kart along the same path.            */
   var trailLag = [.5, .95], trailOp = [.38, .18];
