@@ -214,24 +214,40 @@ body.z-far .lbl.sm { opacity: 0; }
 .kart > i.kw.w4 { right: 3px;   bottom: -1.4px; }
 .kart > i.kb0 { inset: 0; border-radius: 4px;                  /* body base   */
                 background: color-mix(in srgb, var(--accent,#7d848a) 68%, #23282e); }
+/* v9: FOUR standing side quads — N / S / E / W walls, 4.5px tall, hinged on
+   the 24 x 13 base edges exactly the way .f.sy / .f.sx hinge a box's side
+   pair (transform-origin + rotateX / rotateY). A kart yaws through a full
+   360deg, so unlike a static box it needs ALL FOUR walls: whichever pair the
+   camera sees, the body still reads as a solid extruded volume rather than a
+   pair of stacked flat decals. Darker shade of the kart's own accent so the
+   walls sit in shadow under the kb1 top deck.                               */
+.kart > i.kwall    { background: color-mix(in srgb, var(--accent,#7d848a) 58%, #1a1f25); }
+.kart > i.kwall.wn { left: 0;    top: 0;    width: 24px;  height: 4.5px;
+                     transform-origin: 50% 0%; transform: rotateX(90deg); }
+.kart > i.kwall.ws { left: 0;    top: 13px; width: 24px;  height: 4.5px;
+                     transform-origin: 50% 0%; transform: rotateX(90deg); }
+.kart > i.kwall.ww { left: 0;    top: 0;    width: 4.5px; height: 13px;
+                     transform-origin: 0% 50%; transform: rotateY(-90deg); }
+.kart > i.kwall.we { left: 24px; top: 0;    width: 4.5px; height: 13px;
+                     transform-origin: 0% 50%; transform: rotateY(-90deg); }
 .kart > i.kb1 { inset: 1.5px 2px; border-radius: 3px;          /* body deck   */
                 background: var(--accent, #7d848a);
-                transform: translateZ(5px); }
+                transform: translateZ(4.5px); }                /* caps the walls */
 .kart > i.kb1::after {                                          /* nose shine  */
   content: ''; position: absolute; right: 1px; top: 2px; width: 4px; height: 6px;
   border-radius: 1.5px; background: rgba(255,255,255,.45);
 }
 .kart > i.kcp   { left: 5px; top: 2.5px; width: 12px; height: 8px; border-radius: 3px;
-                  background: rgba(30,35,41,.75); transform: translateZ(6px); }
+                  background: rgba(30,35,41,.75); transform: translateZ(5.5px); }
 .kart > i.drv-s { left: 6.5px; top: 2px; width: 11px; height: 9px; border-radius: 4px;
-                  background: rgba(52,58,64,.92); transform: translateZ(8px); }
+                  background: rgba(52,58,64,.92); transform: translateZ(7.5px); }
 .kart > i.drv-a { width: 4px; height: 2.2px; border-radius: 1px;
-                  background: rgba(52,58,64,.92); transform: translateZ(9.5px); }
+                  background: rgba(52,58,64,.92); transform: translateZ(9px); }
 .kart > i.drv-a.al { left: 14px; top: 3px; }
 .kart > i.drv-a.ar { left: 14px; top: 7.8px; }
 .kart > i.drv-h { left: 9px; top: 3px; width: 7px; height: 7px;
                   border-radius: 50%; background: var(--helm, #eef1f3);
-                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(12px); }
+                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(11.5px); }
 /* --- v5 colour trail: tapered streaks chasing each kart on the same path.
    Two segments per kart at growing lag = a fading ribbon, no box ghosts.  */
 .ktrail {
@@ -401,6 +417,8 @@ body.xray #gSurface { --os: .12; }
   border: 1px solid rgba(0,0,0,.08);
   box-shadow: 0 8px 26px -18px rgba(20,26,32,.5);
 }
+.vsep { flex: 0 0 auto; width: 1px; align-self: stretch; margin: 4px 2px;
+        background: rgba(0,0,0,.14); }
 .vbtn {
   flex: 1 1 0; min-height: 34px; padding: 5px 4px; white-space: nowrap;
   font: inherit; font-size: 11.5px; font-weight: 600; color: #6a7178;
@@ -565,6 +583,10 @@ body.xray #gSurface { --os: .12; }
   <button type="button" class="vbtn on" data-view="iso"  aria-pressed="true">45&deg;</button>
   <button type="button" class="vbtn"    data-view="bird" aria-pressed="false">Bird&rsquo;s eye</button>
   <button type="button" class="vbtn"    data-view="flip" aria-pressed="false">45&deg; flip</button>
+  <span class="vsep" aria-hidden="true"></span>
+  <button type="button" class="vbtn" id="zoomin"  aria-label="Zoom in">+</button>
+  <button type="button" class="vbtn" id="zoomout" aria-label="Zoom out">&minus;</button>
+  <button type="button" class="vbtn" id="recenter" aria-label="Recenter map">&#8982;</button>
 </div>
 
 <div id="card">
@@ -630,7 +652,7 @@ var KEYFRAMES = [
     desc:'MiniMe FPV racing · Diecast showcase',
     kick:'Indoor · Level 1 spine',
     title:'South Galleria 4A + 4B',
-    bullets:['4A — six MiniMe FPV rigs with seated drivers ringing a winding mountain-pass circuit',
+    bullets:['4A — RC shop + MiniMe FPV racing: shelves, cashier, and sim rigs on a mini circuit',
              '4B — Diecast showcase, collector stalls racked with colour, running all three days',
              'Both rooms sit on the indoor street, a short walk from the south entrance'],
     /* focus (380,521) dz +34 — centre of the two rooms */
@@ -818,13 +840,12 @@ var MALL_H  = 110;
    v4 resize: block down to ~80% (80x76x46 -> 64x61x37).                     */
 var LOBBY   = { x: 750, y: 622, w: 64, h: 61, z: 37 };   /* centre = 782, 652.5 */
 
-/* ---- 3.1 ground plaza + Raffles Boulevard ------------------------------- */
+/* ---- 3.1 ground plaza ---------------------------------------------------
+   v9: the old Raffles Boulevard strip along the NORTH edge (900,30) is GONE.
+   The site now carries ONE coherent road — the F1 street circuit built in
+   3.4b, which runs the west and south edges. The boulevard NAME survives, on
+   the south straight.                                                       */
 rect(gGround, 'plaza', 30, 40, 1380, 860);
-(function () {
-  rect(gGround, 'road',     900, 30, 510, 44, 'transform:translateZ(1px)');
-  rect(gGround, 'roadline', 900, 50, 510,  3, 'transform:translateZ(2px)');
-  label(gGround, 1155, 60, 3, 'Raffles Boulevard', 'sm det');
-})();
 /* walkway linking the Great Hall to Monument Square, across the building line */
 rect(gGround, 'walk', 1062, 306, 96, 112, 'transform:translateZ(3px)');
 
@@ -898,31 +919,102 @@ label(gMall, 760, 300, 20, 'Millenia Walk');
 
 /* ---- 3.4 South Entrance + taxi stand / pick-up (far west) ----------------
    v7: the entrance is a SLIM SLIDING DOOR (two glass panels with an open gap
-   under a thin canopy), and the road runs VERTICALLY past it, dressed as a
-   race track: red-white kerbs both sides + dashed centre line.              */
+   under a thin canopy).
+   v9: the WHOLE entrance assembly (shadow, both door panels, canopy, label
+   and the walk strip) is shifted +56px EAST. The door leaf now stands at
+   x 124-132 instead of x 68-76, which halves the dead gap to the South
+   Galleria 4A wall at x 190 (was 114px, now 58px). The taxi shelter, its
+   label and the road are deliberately NOT moved.                            */
 (function () {
   /* sliding door: two slim glass panels, gap between = door standing open */
-  shadow(gMall, 66, 452, 12, 140);
-  box(gMall, 68, 452, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
-  box(gMall, 68, 532, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
-  box(gMall, 62, 446, 20, 152, 3, 'transform:translateZ(33px);--faceT:#c5cbd0'); /* canopy */
-  label(gMall, 72, 434, 42, 'South Entrance', 'sm');
-  rect(gGround, 'walk', 84, 480, 100, 92, 'transform:translateZ(3px)');
-
-  /* vertical race-track road: kerbs + centre dashes, running north-south */
-  var RX = 8, RW = 50, RY = 470, RH = 420;
-  rect(gGround, 'road', RX, RY, RW, RH, 'transform:translateZ(1px)');
-  ['0', (RW - 4) + 'px'].forEach(function (edge) {
-    rect(gGround, '', RX + parseFloat(edge), RY, 4, RH,
-      'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
-      '#c8443a 0 9px, #f2f3f4 9px 18px)');
-  });
-  rect(gGround, '', RX + RW / 2 - 1.5, RY, 3, RH,
-    'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
-    '#e8eaec 0 11px, transparent 11px 24px)');
+  shadow(gMall, 122, 452, 12, 140);
+  box(gMall, 124, 452, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 124, 532, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 118, 446, 20, 152, 3, 'transform:translateZ(33px);--faceT:#c5cbd0'); /* canopy */
+  label(gMall, 128, 434, 42, 'South Entrance', 'sm');
+  rect(gGround, 'walk', 138, 480, 50, 92, 'transform:translateZ(3px)');
 
   box(gMall, 96, 606, 60, 22, 16);                        /* taxi shelter       */
   label(gMall, 128, 696, 6, 'Taxi stand · pick-up point', 'sm det');
+})();
+
+/* ---- 3.4b F1 STREET CIRCUIT — the perimeter road ------------------------
+   v9: the single vertical strip that used to sit outside the entrance is
+   replaced by a track that SPANS THE EDGES of the site, the way a street
+   circuit wraps a city block, with breathing space off the building line:
+
+     WEST straight   x    8 ..   58,  y 430 .. 886   (runs south)
+     SOUTH straight  y  836 ..  886,  x   8 .. 1410  (runs east, exits frame)
+     CORNER          a left-hander at the south-west: the two tarmac rects
+                     overlap in the 50 x 50 corner square, and the kerbs +
+                     centre line are carried round it by three SVG arcs
+                     concentric on the inside apex (58,836):
+                       outer kerb  r 48   inner kerb r 16   centre line r 25
+     START/FINISH    8 x 8 chequer band across the south straight at x 148,
+                     right outside the relocated south entrance
+
+   Every kerb is the same 9px red / 9px white rhythm as v7, angled per
+   orientation (180deg on the west straight, 90deg on the south straight).
+   The arcs get it by stacking a solid white stroke under a 9/9 dashed red
+   one — a repeating gradient cannot follow a curve.                         */
+(function () {
+  var WX = 8, WW = 50, WY = 430;               /* west straight               */
+  var SY = 836, SD = 50, SX2 = 1410;           /* south straight              */
+  var IN_X = WX + WW, IN_Y = SY;               /* (58,836) = inside apex      */
+  var KV = 'repeating-linear-gradient(180deg,#c8443a 0 9px,#f2f3f4 9px 18px)';
+  var KH = 'repeating-linear-gradient(90deg,#c8443a 0 9px,#f2f3f4 9px 18px)';
+
+  /* tarmac — the WEST rect runs all the way down to y 886 so it already owns
+     the 50 x 50 corner square; the SOUTH rect therefore starts at x 58 and
+     butts against it. Nothing is coplanar-overlapped, so nothing z-fights. */
+  rect(gGround, 'road', WX,   WY, WW,          (SY + SD) - WY, 'transform:translateZ(1px)');
+  rect(gGround, 'road', IN_X, SY, SX2 - IN_X,  SD,             'transform:translateZ(1px)');
+
+  /* kerbs, both edges of both straights. Each strip stops where its arc
+     takes over: the OUTER pair at the r48 arc, the INNER pair at the r16. */
+  rect(gGround, '', WX,       WY, 4, IN_Y - WY,       /* west  outer (west edge) */
+       'transform:translateZ(2px);background:' + KV);
+  rect(gGround, '', IN_X - 4, WY, 4, (IN_Y - 14) - WY, /* west inner (east edge) */
+       'transform:translateZ(2px);background:' + KV);
+  rect(gGround, '', IN_X + 14, SY, SX2 - (IN_X + 14), 4,   /* south inner (north) */
+       'transform:translateZ(2px);background:' + KH);
+  rect(gGround, '', IN_X, SY + SD - 4, SX2 - IN_X, 4,      /* south outer (south) */
+       'transform:translateZ(2px);background:' + KH);
+
+  /* dashed centre line down each straight */
+  rect(gGround, '', WX + WW / 2 - 1.5, WY, 3, IN_Y - WY,
+    'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
+    '#e8eaec 0 11px, transparent 11px 24px)');
+  rect(gGround, '', IN_X, SY + SD / 2 - 1.5, SX2 - IN_X, 3,
+    'transform:translateZ(2px);background:repeating-linear-gradient(90deg,' +
+    '#e8eaec 0 11px, transparent 11px 24px)');
+
+  /* the corner. viewBox is offset so the arcs stay in WORLD coordinates. */
+  var csvg = svgNS('svg', { width: 120, height: 130, viewBox: '0 790 120 130',
+    style: 'position:absolute;left:0;top:790px;overflow:visible;' +
+           'background:none;transform:translateZ(2px)', class: 'flat' }, gGround);
+  function kerbArc(d) {
+    svgNS('path', { d: d, fill: 'none', stroke: '#f2f3f4', 'stroke-width': 4 }, csvg);
+    svgNS('path', { d: d, fill: 'none', stroke: '#c8443a', 'stroke-width': 4,
+                    'stroke-dasharray': '9 9' }, csvg);
+  }
+  kerbArc('M 10 836 A 48 48 0 0 0 58 884');    /* outer kerb, r48 */
+  kerbArc('M 56 822 A 16 16 0 0 0 72 838');    /* inner apex kerb, r16 */
+  svgNS('path', { d: 'M 33 836 A 25 25 0 0 0 58 861', fill: 'none',
+                  stroke: '#e8eaec', 'stroke-width': 3,
+                  'stroke-dasharray': '11 13' }, csvg);
+
+  /* START / FINISH — 8 x 8 chequer, laid between the kerbs of the south
+     straight, directly outside the relocated south entrance (x 124-132) */
+  rect(gGround, '', 148, SY + 4, 20, SD - 8,
+    'transform:translateZ(2.4px);background-color:#f2f3f4;' +
+    'background-image:linear-gradient(45deg,#22262b 25%,transparent 25%,' +
+    'transparent 75%,#22262b 75%),linear-gradient(45deg,#22262b 25%,' +
+    'transparent 25%,transparent 75%,#22262b 75%);' +
+    'background-size:16px 16px;background-position:0 0,8px 8px');
+
+  /* the boulevard name, moved off the deleted north strip onto the circuit */
+  label(gGround, 700, SY + SD / 2, 5, 'Raffles Boulevard', 'sm det');
 })();
 
 /* ---- 3.5 faded retail units lining both sides of the spine --------------
@@ -961,70 +1053,139 @@ box(zGalleria, 183, 4, 10, 172, 28);
 box(zGalleria, 0,   0, 380, 6, 11);
 box(zGalleria, 0, 174, 380, 6, 11);
 label(zGalleria, 190, -28, 44, 'South Galleria 4A + 4B');
-label(zGalleria,  90, 196,  8, '4A · MiniMe FPV', 'sm det');   /* clear of the south rig row */
+label(zGalleria,  90, 196,  8, '4A · RC shop + MiniMe FPV', 'sm det');   /* clear of the south rig row */
 label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
-/* 4A — SIX MiniMe FPV rigs with seated drivers, 3 along each side, ringing a
-   winding mountain-pass (touge) circuit. Six RC cars, one colour each.       */
+/* 4A — RC SHOP + MiniMe FPV RACING  (v9, rebuilt from the client's 4A plan)
+   -------------------------------------------------------------------------
+   The room is a SHOP first and a racing pen second. Everything below is in
+   zGalleria LOCAL coordinates; 4A owns x 0-180, interior y 6-174.
+
+     x   2 -  14   LEFT EDGE   cashier counter (top-left, taller thin box)
+                               over a column of TWO tall vertical shelf units
+     y 144 - 168   BOTTOM EDGE row of FOUR shelf units on a slight stagger
+     mid           DIAGONAL    three shelf units, lower-left to upper-right
+     y  20 -  32   TOP         three small round tables (disc on a stem)
+     x 110         PARTITION   2px low line + two purple posts, 'RC holder'
+     x 113 - 180   RACING      three sim rigs over a compact 2-hairpin circuit
+
+   Shelf units are built the same way as the 4B diecast shelving: a plain box
+   whose visible SIDE faces carry three stocked tiers painted as repeating
+   gradients, so both rooms read as one retail family.                       */
 (function () {
-  /* --- six sim-rig tableaux: low platform, glowing screen on the track edge,
-     bucket seat, and a BLOCKY SEATED FIGURE (legs, shirt torso, two arms to a
-     wheel, head) built from stacked leaves so the person reads in 3D.
-     f = +1 when the rig faces south (north row), -1 when it faces north.    */
-  var RIG_W = 34, RIG_D = 22;
-  var shirt = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a'];
+  var PAL = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a',
+             '#34a06a', '#efa227', '#3f7fd6', '#b5563f', '#5b6068', '#c98a2e'];
+  function tierBG(off) {
+    var stops = [];
+    for (var i = 0; i < 7; i++) {
+      stops.push(PAL[(off + i * 3) % PAL.length] + ' ' + (i * 5) + 'px ' + ((i + 1) * 5) + 'px');
+    }
+    return 'repeating-linear-gradient(90deg,' + stops.join(',') + ')';
+  }
+  function stockFace(face, off) {
+    if (!face) return;
+    for (var t = 0; t < 3; t++) {
+      var s = document.createElement('div');
+      s.style.cssText = 'position:absolute;left:5%;right:5%;height:4.5px;' +
+        'top:' + (4 + t * 8) + 'px;border-radius:1px;opacity:.95;' +
+        'background:' + tierBG(off + t * 5);
+      face.appendChild(s);
+    }
+  }
+  /* one stocked shelf unit. deg != 0 wraps it in a shallow rotated grp — kept
+     shallow on purpose, the wall-quadrant swap is driven by CAMERA rz only. */
+  function shelf(x, y, w, d, off, deg) {
+    var host = zGalleria, lx = x, ly = y;
+    if (deg) { host = grp(zGalleria, x + w / 2, y + d / 2, w, d, deg); lx = 0; ly = 0; }
+    var b = box(host, lx, ly, w, d, 26);
+    stockFace(b.querySelector('.f.sy'), off);
+    stockFace(b.querySelector('.f.sx'), off + 7);
+    return b;
+  }
+
+  /* --- LEFT EDGE: cashier over a column of two shelves -------------------- */
+  box(zGalleria, 2, 12, 12, 34, 30, '--faceT:#d3dae0;--faceA:#b6bec5;--faceB:#c2c9d0');
+  label(zGalleria, 26, 10, 34, 'Cashier', 'sm det');
+  shelf(2,  56, 12, 40,  0, 0);
+  shelf(2, 104, 12, 40,  6, 0);
+
+  /* --- BOTTOM EDGE: four units drifting south-east across the wall -------- */
+  [[16, 148], [38, 151], [60, 154], [82, 157]].forEach(function (u, i) {
+    shelf(u[0], u[1], 20, 12, 3 + i * 4, -8);
+  });
+
+  /* --- MIDDLE: three units on a lower-left -> upper-right diagonal --------
+     COMPROMISE: the row runs at about -43deg, but each unit is only spun
+     -24deg. A prop spun much further than that can show the wrong side pair
+     when the camera crosses rz 0, so the row is read from the POSITIONS and
+     the units just lean into it.                                            */
+  [[21, 122], [47, 98], [73, 74]].forEach(function (u, i) {
+    shelf(u[0], u[1], 26, 12, 9 + i * 5, -24);
+  });
+
+  /* --- TOP: three small round tables, disc on a thin stem ----------------- */
+  [[32, 26], [58, 20], [84, 26]].forEach(function (t) {
+    box(zGalleria, t[0] - 1.5, t[1] - 1.5, 3, 3, 12,
+        '--faceT:#b79a72;--faceA:#8f7756;--faceB:#a08663');
+    rect(zGalleria, '', t[0] - 5, t[1] - 5, 10, 10,
+      'background:#d8c3a0;border-radius:50%;transform:translateZ(12.4px);' +
+      'box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)');
+  });
+
+  /* --- PARTITION: shop on the west of it, racing on the east -------------- */
+  box(zGalleria, 110, 16, 2, 148, 5, '--faceT:#cdc5e0;--faceA:#b3a8cf;--faceB:#bdb2d6');
+  box(zGalleria, 108,  14, 6, 6, 14, '--faceT:#a98cd2;--faceA:#7b5eab;--faceB:#8a6dba');
+  box(zGalleria, 108, 158, 6, 6, 14, '--faceT:#a98cd2;--faceA:#7b5eab;--faceB:#8a6dba');
+  label(zGalleria, 108, 4, 22, 'RC holder', 'sm det');
+
+  /* --- RACING: THREE sim-rig tableaux (was six) --------------------------
+     Same construction as before — low platform, glowing screen hinged upright
+     off the track-facing edge, bucket seat, and a blocky seated figure — just
+     shrunk to 20 x 17 so three of them fit across the right-hand strip and
+     all face SOUTH (f = +1) down onto the circuit.                          */
+  var RIG_W = 20, RIG_D = 17;
+  var shirt = ['#c8443a', '#2f6fc4', '#e0a72a'];
   function lf(x, y, w, h, z, extra) {
     return el('fade', 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w +
       'px;height:' + h + 'px;transform:translateZ(' + z + 'px);' + (extra || ''), zGalleria);
   }
-  var rigs = [
-    { x: 12,  y: 6,   f:  1 }, { x: 68,  y: 6,   f:  1 }, { x: 124, y: 6,   f:  1 },
-    { x: 12,  y: 152, f: -1 }, { x: 68,  y: 152, f: -1 }, { x: 124, y: 152, f: -1 }
-  ];
-  rigs.forEach(function (r, i) {
-    var cx = r.x + RIG_W / 2, f = r.f;
+  [{ x: 118, y: 12 }, { x: 139, y: 12 }, { x: 160, y: 12 }].forEach(function (r, i) {
+    var cx = r.x + RIG_W / 2, f = 1;
     box(zGalleria, r.x, r.y, RIG_W, RIG_D, 3, '--faceT:#c5cbd0');
-    /* screen hinges upright off the track-facing edge */
     var s = el('fade', 'position:absolute;left:' + (r.x + 3) + 'px;top:' +
-      (f > 0 ? r.y + RIG_D : r.y - 16) + 'px;width:28px;height:16px;' +
-      'transform-origin:50% ' + (f > 0 ? '0%' : '100%') + ';' +
-      'transform:rotateX(' + (f > 0 ? 90 : -90) + 'deg);transform-style:preserve-3d', zGalleria);
+      (r.y + RIG_D) + 'px;width:' + (RIG_W - 6) + 'px;height:14px;' +
+      'transform-origin:50% 0%;transform:rotateX(90deg);transform-style:preserve-3d', zGalleria);
     s.style.setProperty('--accent', '#3f7fd6');
     el('glowpanel', '', s);
-    /* bucket seat: pan + backrest at the rear, away from the screen */
-    var seatY = f > 0 ? r.y + 2 : r.y + RIG_D - 8;
+    var seatY = r.y + 2;
     box(zGalleria, cx - 5, seatY, 10, 6, 6, '--faceT:#3a4046;--faceA:#2e3338;--faceB:#34393f');
-    box(zGalleria, cx - 5, f > 0 ? seatY - 2 : seatY + 6, 10, 2, 13,
+    box(zGalleria, cx - 5, seatY - 2, 10, 2, 13,
         '--faceT:#3a4046;--faceA:#2e3338;--faceB:#34393f');
-    /* the figure: legs to the pedals, torso on the seat, arms to the wheel, head on top */
-    lf(cx - 4, f > 0 ? seatY + 5 : seatY - 7, 8, 8, 7, 'background:#4a5258;border-radius:2px');
-    lf(cx - 4, f > 0 ? seatY + 0.5 : seatY + 1.5, 8, 5, 10,
-       'background:' + shirt[i] + ';border-radius:2px');
-    lf(cx - 5, f > 0 ? seatY + 4 : seatY - 3, 2.5, 6, 11,
-       'background:' + shirt[i] + ';border-radius:1px');
-    lf(cx + 2.5, f > 0 ? seatY + 4 : seatY - 3, 2.5, 6, 11,
-       'background:' + shirt[i] + ';border-radius:1px');
-    lf(cx - 3, f > 0 ? seatY - 0.5 : seatY + 2.5, 6, 6, 15,
+    lf(cx - 4,   seatY + 5,   8, 8, 7,  'background:#4a5258;border-radius:2px');
+    lf(cx - 4,   seatY + 0.5, 8, 5, 10, 'background:' + shirt[i] + ';border-radius:2px');
+    lf(cx - 5,   seatY + 4, 2.5, 6, 11, 'background:' + shirt[i] + ';border-radius:1px');
+    lf(cx + 2.5, seatY + 4, 2.5, 6, 11, 'background:' + shirt[i] + ';border-radius:1px');
+    lf(cx - 3,   seatY - 0.5, 6, 6, 15,
        'background:#e9cfae;border-radius:2.5px;box-shadow:0 0 0 1px rgba(20,26,32,.28)');
-    /* steering wheel between the arms and the screen */
-    lf(cx - 2.5, f > 0 ? seatY + 9.5 : seatY - 5.5, 5, 5, 10,
+    lf(cx - 2.5, seatY + 9.5, 5, 5, 10,
        'background:#23282d;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)');
   });
 
-  /* --- the circuit: a touge, not an oval ---------------------------------
-     One closed pass of S-curves with a hairpin at each end, laid inside the
-     band the rigs leave free (y 34-146). Deliberately narrow (12px) so the
-     switchbacks stay legible at zone zoom.                                  */
-  var d = 'M 30 60 C 38 45, 62 38, 80 54 C 92 66, 106 68, 118 56 ' +
-          'C 132 42, 162 46, 163 68 C 164 90, 138 86, 130 100 ' +
-          'C 122 112, 130 128, 110 133 C 90 138, 84 120, 66 118 ' +
-          'C 48 116, 46 134, 32 129 C 16 124, 13 100, 22 82 ' +
-          'C 25 74, 26 70, 30 60 Z';
+  /* --- the circuit, shrunk to the right-hand strip ------------------------
+     COMPROMISE: the full v8 touge does not survive being squeezed into a
+     64 x 120 pocket, so it is redrawn as the compact 2-hairpin S-loop the
+     brief allows: an r16 hairpin over the top (apex y 54), an r16 hairpin
+     under the bottom (apex y 156), and the two branches pinched toward each
+     other at the waist so the lap still has to be steered.
+     Extent x 123-167, y 49-161 with the 10px stroke — clear of the rigs
+     above (they end at y 29) and of the partition at x 110.                 */
+  var d = 'M 128 70 A 16 16 0 0 1 160 70 ' +
+          'C 160 86, 154 92, 154 105 C 154 119, 162 126, 162 140 ' +
+          'A 16 16 0 0 1 130 140 ' +
+          'C 130 126, 136 119, 136 105 C 136 92, 128 84, 128 70 Z';
 
-  /* green terrain patches hugging the OUTSIDE of the curves — the cheapest
-     honest hint of a hillside without modelling any relief */
-  [[4, 34, 28, 20], [144, 30, 34, 18], [168, 76, 12, 30],
-   [72, 136, 44, 12], [2, 98, 12, 34]].forEach(function (t) {
+  /* two green terrain patches, kept outside the stroke on either flank */
+  [[114, 96, 8, 26], [168, 100, 10, 24]].forEach(function (t) {
     rect(zGalleria, '', t[0], t[1], t[2], t[3],
       'background:rgba(126,168,124,.34);border-radius:8px;transform:translateZ(5.4px)');
   });
@@ -1032,22 +1193,25 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
   var svg = svgNS('svg', { width: 380, height: 180, viewBox: '0 0 380 180',
     style: 'position:absolute;left:0;top:0;transform:translateZ(6px)', class: 'flat' }, zGalleria);
   svg.style.background = 'none';
-  svgNS('path', { d: d, fill: 'none', stroke: '#bfd4e2', 'stroke-width': 12,
+  svgNS('path', { d: d, fill: 'none', stroke: '#bfd4e2', 'stroke-width': 10,
                   'stroke-linejoin': 'round' }, svg);
-  svgNS('path', { d: d, fill: 'none', stroke: '#eef3f7', 'stroke-width': 1.4,
-                  'stroke-dasharray': '6 7' }, svg);
-  /* contour edges along the outside of the two hairpins and the west sweep */
-  ['M 6 44 Q 24 30 50 33', 'M 146 32 Q 170 42 177 64', 'M 8 106 Q 5 132 26 143']
-    .forEach(function (c) {
-      svgNS('path', { d: c, fill: 'none', stroke: '#8fb790', 'stroke-width': 1.6,
-                      opacity: '.7' }, svg);
-    });
+  svgNS('path', { d: d, fill: 'none', stroke: '#eef3f7', 'stroke-width': 1.2,
+                  'stroke-dasharray': '5 6' }, svg);
 
-  /* six RC cars, one colour each, staggered evenly round the lap */
-  var cols = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#3b4148'];
-  for (var k = 0; k < 6; k++) {
-    el('rc', '--path:path("' + d + '");--dur:7s;--accent:' + cols[k] + ';--dly:' +
-             (-k * 1.167).toFixed(2) + 's;transform:translateZ(9px)', zGalleria);
+  /* FOUR RC cars, one colour each, staggered evenly round the lap */
+  var cols = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d'];
+  for (var k = 0; k < 4; k++) {
+    el('rc', '--path:path("' + d + '");--dur:6s;--accent:' + cols[k] + ';--dly:' +
+             (-k * 1.5).toFixed(2) + 's;transform:translateZ(9px);' +
+             'width:9px;height:5px;margin:-2.5px 0 0 -4.5px', zGalleria);
+  }
+
+  /* --- ~8 shoppers sprinkled through the shop half ------------------------ */
+  var rnd = rnder(53);
+  for (var i = 0; i < 8; i++) {
+    var w = el('dotwrap', 'left:' + (20 + rnd() * 84) + 'px;top:' + (30 + rnd() * 118) +
+                          'px;transform:translateZ(6px)', zGalleria);
+    el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
   }
 })();
 
@@ -1112,11 +1276,12 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
   label(gMall, 662, 438, 8, 'Escalators', 'sm det');
 
-  /* v7: the two kiosks in front of Lift Lobby A sit aligned in one line */
-  box(gMall, 700, 470, 66, 46, 16, '--ol:.62');
-  label(gMall, 733, 460, 22, 'SG 1', 'sm det');
-  box(gMall, 776, 470, 66, 46, 16, '--ol:.62');
-  label(gMall, 809, 460, 22, 'SG 2', 'sm det');
+  /* v8: the two kiosks sit CENTRED on the spine (not on its edge), aligned
+     in one line in front of Lift Lobby A */
+  box(gMall, 711, 499, 66, 46, 16, '--ol:.62');
+  label(gMall, 744, 489, 22, 'SG 1', 'sm det');
+  box(gMall, 787, 499, 66, 46, 16, '--ol:.62');
+  label(gMall, 820, 489, 22, 'SG 2', 'sm det');
 })();
 
 /* ---- 3.8 (v4) OFFICIAL F1 MERCHANDISE moved INSIDE the Great Hall --------
@@ -1272,7 +1437,10 @@ var DRIFT_PATH =
   var kartHelm  = ['#f4f7f9', '#ffd873', '#eef1f3', '#ffd2dc', '#cfeaff', '#fff0c2'];
   var KART_BODY = '<i class="ksh"></i>' +
                   '<i class="kw w1"></i><i class="kw w2"></i><i class="kw w3"></i><i class="kw w4"></i>' +
-                  '<i class="kb0"></i><i class="kb1"></i><i class="kcp"></i>' +
+                  '<i class="kb0"></i>' +
+                  '<i class="kwall wn"></i><i class="kwall ws"></i>' +
+                  '<i class="kwall ww"></i><i class="kwall we"></i>' +
+                  '<i class="kb1"></i><i class="kcp"></i>' +
                   '<i class="drv-s"></i><i class="drv-a al"></i><i class="drv-a ar"></i>' +
                   '<i class="drv-h"></i>';
   /* v5: one 3D kart + two colour-streak trail segments per kart (no ghosts).
@@ -1493,7 +1661,7 @@ function frame(now) {
     cur.rz    = from.rz    + (to.rz    - from.rz)    * e;
     cur.rx    = from.rx    + (to.rx    - from.rx)    * e;
   } else if (momActive) {
-    /* post-release coast: decay the thrown angular velocity to zero over
+    /* post-release PAN coast: decay the thrown velocity to zero over
        MOMENTUM_MS on a squared ease-out, integrated against REAL frame time
        so the throw feels the same at 60Hz and 120Hz. */
     var mp  = (now - momT0) / MOMENTUM_MS;
@@ -1502,14 +1670,15 @@ function frame(now) {
     if (mp >= 1) { momActive = false; }
     else {
       var mk = (1 - mp) * (1 - mp);
-      cur.rz  = cur.rz + momVZ * mk * mdt;
-      cur.rx  = clampRX(cur.rx + momVX * mk * mdt);
+      cur.tx = cur.tx + momVX * mk * mdt;
+      cur.ty = cur.ty + momVY * mk * mdt;
+      clampPan();
     }
   }
   /* idle breathing rides on top of the tweened scale, never replaces it.
      breathK is damped to 0 for the whole drag AND the coast that follows it,
      so the jitter can never fight the hand.                                 */
-  breathK += (((dragMoved || momActive) ? 0 : 1) - breathK) * 0.10;
+  breathK += (((navBusy() || momActive) ? 0 : 1) - breathK) * 0.10;
   var breath = 1 + BREATHE_AMP * 0.5 * breathK *
                (1 - Math.cos(2 * Math.PI * (now % BREATHE_PERIOD) / BREATHE_PERIOD));
 
@@ -1663,7 +1832,21 @@ function applyView(id) {
   setViewBtn(id);
 }
 viewBtns.forEach(function (b) {
+  if (!b.dataset.view) return;
   b.addEventListener('click', function () { applyView(b.dataset.view); });
+});
+
+/* v8: on-screen zoom + recenter (research: always offer button fallbacks
+   alongside gestures — pinch-only fails discoverability + accessibility) */
+document.getElementById('zoomin').addEventListener('click', function () {
+  stopMomentum(); zoomAt(innerWidth / 2, innerHeight / 2, 1.45);
+});
+document.getElementById('zoomout').addEventListener('click', function () {
+  stopMomentum(); zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.45);
+});
+document.getElementById('recenter').addEventListener('click', function () {
+  stopMomentum(); freeOrbit = false;
+  if (current) select(current); else go('overview');
 });
 
 /* ==========================================================================
@@ -1688,87 +1871,147 @@ viewBtns.forEach(function (b) {
      g  once the user has orbited by hand, NO view preset is shown as active
         until one is actually pressed (freeOrbit, cleared by flyTo/applyView)
    ========================================================================== */
-var DRAG_DEG_PER_PX = 0.45;      /* rz: horizontal */
-var DRAG_RX_PER_PX  = 0.30;      /* rx: vertical   */
+/* v8 — STANDARD MAP GRAMMAR (what every map app trains users to expect):
+     one finger / left-drag   PAN, 1:1 px, with momentum coast on release
+     pinch                    ZOOM about the pinch midpoint (and pans with it)
+     wheel / trackpad scroll  ZOOM about the cursor
+     right-drag or Alt-drag   ORBIT (rz + tilt rx, desktop power users)
+     view presets             angles; [+][-][target] buttons zoom and recenter */
+var DRAG_DEG_PER_PX = 0.45;      /* orbit rz: horizontal */
+var DRAG_RX_PER_PX  = 0.30;      /* orbit rx: vertical   */
 var DRAG_THRESHOLD  = 6;
-var RX_MIN = 22, RX_MAX = 70, MOMENTUM_MS = 600;
-var VEL_SMOOTH = 0.35;           /* new-sample weight in the velocity filter */
-var VEL_MIN    = 0.004;          /* deg/ms below which a release is a stop   */
+var RX_MIN = 22, RX_MAX = 70, MOMENTUM_MS = 650;
+var SCALE_MIN_F = 0.55, SCALE_MAX = 3.2;   /* min = factor on the overview scale */
+var VEL_SMOOTH = 0.35;
+var VEL_MIN    = 0.02;           /* px/ms below which a pan release is a stop */
 
-var dragActive = false, dragMoved = false, dragId = null;
-var dragX0 = 0, dragY0 = 0, dragRZ0 = 0, dragRX0 = 0, suppressClick = false;
-var lastPX = 0, lastPY = 0, lastPT = 0, velRZ = 0, velRX = 0;
-var momActive = false, momT0 = 0, momLast = 0, momVZ = 0, momVX = 0;
-var freeOrbit = false;           /* user has orbited by hand since the last preset/chip */
+var ptrs = {};                   /* live pointers, for pinch                  */
+var nav  = null;                 /* current gesture                           */
+var momActive = false, momT0 = 0, momLast = 0, momVX = 0, momVY = 0;
+var freeOrbit = false, suppressClick = false;
 
-/* The Bird's-eye preset parks rx at 16, BELOW the drag floor. Clamping hard to
-   RX_MIN would pop the world on the first vertical move out of that pose, so
-   each gesture takes its floor from wherever it started. Normal orbiting still
-   lives in 22..70; only a pose that was already flatter keeps its own floor. */
-var rxFloor = RX_MIN;
-function clampRX(v) { return v < rxFloor ? rxFloor : (v > RX_MAX ? RX_MAX : v); }
+function navBusy() { return !!(nav && (nav.moved || nav.mode === 'pinch')); }
+function minScale() { return resolve(KEYFRAMES[0]).scale * SCALE_MIN_F; }
+function clampScale(s) { var lo = minScale(); return s < lo ? lo : (s > SCALE_MAX ? SCALE_MAX : s); }
+function clampRX(v) {
+  var lo = (nav && nav.rxFloor != null) ? nav.rxFloor : Math.min(RX_MIN, cur.rx);
+  return v < lo ? lo : (v > RX_MAX ? RX_MAX : v);
+}
 function stopMomentum() { momActive = false; }
 
+/* zoom keeping the screen point (px,py) fixed on the same world point */
+function zoomAt(px, py, factor) {
+  var s0 = cur.scale, s1 = clampScale(s0 * factor);
+  if (s1 === s0) return;
+  var cx = innerWidth / 2, cy = innerHeight / 2, k = s1 / s0;
+  cur.tx = (px - cx) - ((px - cx) - cur.tx) * k;
+  cur.ty = (py - cy) - ((py - cy) - cur.ty) * k;
+  cur.scale = s1;
+  clampPan();
+  tweening = false;
+}
+/* pan extent: the world can never be thrown fully off screen (research:
+   unbounded pan into empty void reads as "the map is stuck / broken") */
+function clampPan() {
+  var lim = 720 * cur.scale + Math.min(innerWidth, innerHeight) * 0.35;
+  if (cur.tx >  lim) cur.tx =  lim;
+  if (cur.tx < -lim) cur.tx = -lim;
+  if (cur.ty >  lim) cur.ty =  lim;
+  if (cur.ty < -lim) cur.ty = -lim;
+}
+
 stage.addEventListener('pointerdown', function (e) {
-  if (e.button && e.button !== 0) return;
   if (e.target.closest('#hud') || e.target.closest('#card') || e.target.closest('#views')) return;
+  ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+  var ids = Object.keys(ptrs);
   stopMomentum();
-  dragActive = true; dragMoved = false; dragId = e.pointerId;
-  dragX0 = lastPX = e.clientX;
-  dragY0 = lastPY = e.clientY;
-  dragRZ0 = cur.rz; dragRX0 = cur.rx;
-  rxFloor = Math.min(RX_MIN, cur.rx);
-  lastPT = performance.now();
-  velRZ = velRX = 0;
+  if (ids.length === 2) {          /* second finger down -> pinch takes over */
+    var a = ptrs[ids[0]], b = ptrs[ids[1]];
+    nav = { mode: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: cur.scale,
+            mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, tx0: cur.tx, ty0: cur.ty };
+    tweening = false;
+    suppressClick = true;
+    return;
+  }
+  if (ids.length > 2) return;
+  if (e.button && e.button !== 0 && e.button !== 2) return;
+  var rotate = (e.button === 2) || e.altKey;
+  nav = { mode: rotate ? 'rotate' : 'pan', id: e.pointerId, moved: false,
+          x0: e.clientX, y0: e.clientY, tx0: cur.tx, ty0: cur.ty,
+          rz0: cur.rz, rx0: cur.rx, rxFloor: Math.min(RX_MIN, cur.rx),
+          lx: e.clientX, ly: e.clientY, lt: performance.now(), vx: 0, vy: 0 };
 });
 stage.addEventListener('pointermove', function (e) {
-  if (!dragActive || e.pointerId !== dragId) return;
-  var dx = e.clientX - dragX0, dy = e.clientY - dragY0;
-  if (!dragMoved) {
-    /* threshold on EITHER axis — v3 abandoned the gesture on a vertical lead,
-       which is what made the tilt feel non-existent */
+  if (ptrs[e.pointerId]) { ptrs[e.pointerId].x = e.clientX; ptrs[e.pointerId].y = e.clientY; }
+  if (!nav) return;
+  if (nav.mode === 'pinch') {
+    var ids = Object.keys(ptrs);
+    if (ids.length < 2) return;
+    var a = ptrs[ids[0]], b = ptrs[ids[1]];
+    var s1 = clampScale(nav.s0 * (Math.hypot(a.x - b.x, a.y - b.y) / nav.d0));
+    var k = s1 / nav.s0, cx = innerWidth / 2, cy = innerHeight / 2;
+    var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    cur.tx = (nav.mx - cx) - ((nav.mx - cx) - nav.tx0) * k + (mx - nav.mx);
+    cur.ty = (nav.my - cy) - ((nav.my - cy) - nav.ty0) * k + (my - nav.my);
+    cur.scale = s1;
+    document.body.classList.add('dragging');
+    return;
+  }
+  if (e.pointerId !== nav.id) return;
+  var dx = e.clientX - nav.x0, dy = e.clientY - nav.y0;
+  if (!nav.moved) {
     if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
-    dragMoved = true;
-    freeOrbit = true;
+    nav.moved = true;
     tweening = false;
     document.body.classList.add('dragging');
-    try { stage.setPointerCapture(dragId); } catch (err) {}
+    try { stage.setPointerCapture(nav.id); } catch (err) {}
   }
-  /* instantaneous velocity in deg/ms, low-pass filtered so one jittery
-     sample at release cannot fling the world */
-  var now = performance.now(), dt = now - lastPT;
-  if (dt > 0) {
-    var iz =  (e.clientX - lastPX) * DRAG_DEG_PER_PX / dt;
-    var ix = -(e.clientY - lastPY) * DRAG_RX_PER_PX  / dt;
-    velRZ = velRZ * (1 - VEL_SMOOTH) + iz * VEL_SMOOTH;
-    velRX = velRX * (1 - VEL_SMOOTH) + ix * VEL_SMOOTH;
-    lastPX = e.clientX; lastPY = e.clientY; lastPT = now;
+  var now = performance.now(), dt = now - nav.lt;
+  if (nav.mode === 'pan') {
+    if (dt > 0) {
+      nav.vx = nav.vx * (1 - VEL_SMOOTH) + (e.clientX - nav.lx) / dt * VEL_SMOOTH;
+      nav.vy = nav.vy * (1 - VEL_SMOOTH) + (e.clientY - nav.ly) / dt * VEL_SMOOTH;
+    }
+    cur.tx = nav.tx0 + dx;
+    cur.ty = nav.ty0 + dy;
+    clampPan();
+  } else {
+    freeOrbit = true;
+    cur.rz = nav.rz0 + dx * DRAG_DEG_PER_PX;
+    cur.rx = clampRX(nav.rx0 - dy * DRAG_RX_PER_PX);
+    syncViewBtns();
   }
-  /* absolute mapping from the gesture origin: no drift, no accumulated error */
-  cur.rz = dragRZ0 + dx * DRAG_DEG_PER_PX;
-  cur.rx = clampRX(dragRX0 - dy * DRAG_RX_PER_PX);
-  syncViewBtns();
+  nav.lx = e.clientX; nav.ly = e.clientY; nav.lt = now;
 });
-function endDrag() {
-  if (!dragActive) return;
-  dragActive = false;
-  if (dragMoved) {
+function endNav(e) {
+  if (e && ptrs[e.pointerId] !== undefined) delete ptrs[e.pointerId];
+  if (!nav) { document.body.classList.remove('dragging'); return; }
+  if (nav.mode === 'pinch') {
+    if (Object.keys(ptrs).length < 2) { nav = null; document.body.classList.remove('dragging'); }
+    return;
+  }
+  if (e && e.pointerId !== nav.id) return;
+  if (nav.moved) {
     suppressClick = true;
     setTimeout(function () { suppressClick = false; }, 0);
-    /* coast: hand the filtered velocity to the frame loop to decay */
-    if (Math.abs(velRZ) > VEL_MIN || Math.abs(velRX) > VEL_MIN) {
-      momVZ = velRZ; momVX = velRX;
+    if (nav.mode === 'pan' && (Math.abs(nav.vx) > VEL_MIN || Math.abs(nav.vy) > VEL_MIN)) {
+      momVX = nav.vx; momVY = nav.vy;
       momT0 = momLast = performance.now();
       momActive = true;
     }
   }
-  dragMoved = false;
   document.body.classList.remove('dragging');
-  try { stage.releasePointerCapture(dragId); } catch (err) {}
+  try { stage.releasePointerCapture(nav.id); } catch (err) {}
+  nav = null;
 }
-stage.addEventListener('pointerup', endDrag);
-stage.addEventListener('pointercancel', endDrag);
-stage.addEventListener('lostpointercapture', endDrag);
+stage.addEventListener('pointerup', endNav);
+stage.addEventListener('pointercancel', endNav);
+stage.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+stage.addEventListener('wheel', function (e) {
+  e.preventDefault();
+  stopMomentum();
+  zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0016));
+}, { passive: false });
 
 /* Once the world has been orbited by hand it matches no preset, so the
    cluster shows nothing active until a preset (or a chip) is pressed. */
@@ -1832,11 +2075,20 @@ function lobbyJump() {
    device-agnostic: a render can still walk the table row by row (fit = 1,
    zoom boost = 1, bias = 0) to produce the promo video.
    ========================================================================== */
+/* v8: tap-to-home is DELAYED past the double-tap window, so a double-tap
+   zooms instead of flying home twice. A second tap cancels the pending home. */
+var homeTimer = null;
 stage.addEventListener('click', function (e) {
   if (suppressClick) return;
   if (e.target.closest('#hud') || e.target.closest('#card') || e.target.closest('#views')) return;
   if (e.target.closest('.liftlink')) return;
-  go('overview');
+  if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; return; }
+  homeTimer = setTimeout(function () { homeTimer = null; go('overview'); }, 340);
+});
+stage.addEventListener('dblclick', function (e) {
+  if (e.target.closest('#hud') || e.target.closest('#card') || e.target.closest('#views')) return;
+  if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; }
+  zoomAt(e.clientX, e.clientY, 1.7);
 });
 
 document.addEventListener('keydown', function (e) {
@@ -1965,12 +2217,33 @@ Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 6 on a
     chairs in two loose clusters, two parasols and a beverage cart, and NO low
     or standing tables. The zone glow hugs the smaller footprint and the chip
     flight still lands the whole thing centred on a 390px phone.
-14. SOUTH GALLERIA (v4) — 4A: SIX rigs, three along each side, each with a
-    seated person and an inward-facing screen, surrounding a WINDING mountain
-    circuit (S-curves plus hairpins, not an oval) with green terrain patches and
-    contour edges outside the curves. SIX RC cars, one colour each, staggered,
-    none of them cutting a corner off the tarmac. 4B: the stalls are smaller
-    than v3 and every one is racked with tiny multicoloured diecast squares.
+14. SOUTH GALLERIA (v9) — 4A now reads as an RC SHOP with a racing pen bolted
+    on the east: a cashier counter top-left over a column of two tall shelves,
+    a staggered row of four shelf units along the bottom wall, a diagonal row
+    of three across the middle, three round tables at the top, and ~8 shoppers.
+    A thin purple-posted partition labelled RC HOLDER splits the room; east of
+    it are THREE sim rigs with seated drivers over a compact 2-hairpin circuit
+    with FOUR RC cars. Every shelf carries stocked colour tiers on its side
+    faces, matching 4B. Nothing overlaps the partition or the party wall.
+    4B: unchanged — small stalls racked with tiny multicoloured diecast squares.
+15. F1 STREET CIRCUIT (v9) — there is exactly ONE road on the site and it hugs
+    the EDGES: a west straight running south, a rounded left-hander at the
+    south-west corner, then a long south straight running east out of frame.
+    Red/white kerbs on BOTH edges of BOTH straights, dashed centre line on each,
+    and the kerbs + centre line carry cleanly round the corner on their arcs
+    with no gap and no kink. The chequered start/finish band sits on the south
+    straight outside the south entrance. The old Raffles Boulevard strip along
+    the NORTH edge is GONE; the name now sits on the south straight.
+16. SOUTH ENTRANCE GAP (v9) — the sliding door stands at x 124-132, roughly
+    half the old dead run to the South Galleria 4A wall at x 190. Shadow, both
+    door panels, canopy, label and the walk strip all moved together; the taxi
+    shelter and its label did NOT move.
+17. KART VOLUME (v9) — orbit a full 360deg of rz with the Dorifto zone selected
+    and watch one kart through a whole lap. It must read as a SOLID BOX from
+    every yaw angle: four dark accent-shaded walls standing 4.5px on the base
+    edges, capped flush by the lighter top deck, with the cockpit, driver and
+    helmet stacked above. No angle where the body collapses into flat decals,
+    and the wheels still show proud of the walls.
 ================================================================================
 -->
 </body>
