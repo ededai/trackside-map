@@ -194,7 +194,8 @@ body.z-far .lbl.sm { opacity: 0; }
   margin: -6.5px 0 0 -12px;
   transform-style: preserve-3d;
   offset-path: var(--path);
-  offset-rotate: auto var(--drift, 22deg);   /* yaw held ahead of travel = drift */
+  offset-rotate: auto;   /* v7: true tangent-following — straight on straights,
+                            turning through corners, no fake held drift angle */
   animation: lap var(--dur, 19s) linear infinite;   /* ~60% of v3 ground speed */
   animation-delay: var(--dly, 0s);
   will-change: transform;
@@ -202,6 +203,15 @@ body.z-far .lbl.sm { opacity: 0; }
 .kart > i { position: absolute; display: block;
             opacity: calc(var(--os,1) * var(--oz,1));
             transition: opacity .55s ease; }
+.kart > i.ksh { left: -1px; top: -1.5px; right: -1px; bottom: -1.5px;   /* ground shadow */
+                border-radius: 6px; background: rgba(20,26,32,.30);
+                filter: blur(2px); transform: translateZ(.3px); }
+.kart > i.kw  { width: 4.5px; height: 3px; border-radius: 1px;          /* 4 wheels */
+                background: #22262b; transform: translateZ(1.5px); }
+.kart > i.kw.w1 { left: 2px;    top: -1.4px; }
+.kart > i.kw.w2 { left: 2px;    bottom: -1.4px; }
+.kart > i.kw.w3 { right: 3px;   top: -1.4px; }
+.kart > i.kw.w4 { right: 3px;   bottom: -1.4px; }
 .kart > i.kb0 { inset: 0; border-radius: 4px;                  /* body base   */
                 background: color-mix(in srgb, var(--accent,#7d848a) 68%, #23282e); }
 .kart > i.kb1 { inset: 1.5px 2px; border-radius: 3px;          /* body deck   */
@@ -282,6 +292,25 @@ svg.zglowsvg { position: absolute; left: 0; top: 0; overflow: visible;
 .zone.is-active svg.zglowsvg { opacity: .95; }
 
 /* ========================= LIFT LOBBY A — LEVEL LINK ===================== */
+/* v7: map-pin marker floating over the lift lobby — billboarded like a label,
+   teardrop drawn in CSS, gentle bob so the eye finds it */
+.lbl.pin > span {
+  width: 20px; height: 20px; padding: 0;
+  border-radius: 50% 50% 50% 0;
+  background: #2f6fc4; border: 2px solid #fff;
+  box-shadow: 2px 4px 10px -2px rgba(20,26,32,.45);
+  transform: rotate(-45deg);
+  animation: pinbob 2.4s ease-in-out infinite;
+}
+.lbl.pin > span::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%; background: #fff;
+}
+@keyframes pinbob {
+  0%, 100% { transform: rotate(-45deg) translate(0, 0); }
+  50%      { transform: rotate(-45deg) translate(-4px, -4px); }
+}
 .liftlink { cursor: pointer; }
 .liftlink .f { transition: background .25s ease, opacity .55s cubic-bezier(.4,0,.2,1); }
 .liftlink:hover .f.top { background: #cdd8ea; }
@@ -808,17 +837,7 @@ el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zSquare);
 label(zSquare, 185,  -8, 24, 'Monument Square');
 label(zSquare, 185, 250,  6, 'Scale RC experience · outdoor plaza', 'sm det');
 
-/* planter trees ringing the plaza */
-(function () {
-  /* planterTree is ~24 x 24 about its CENTRE, so the ring is inset by 16 */
-  var tree = prop('planterTree'), i;
-  function put(x, y) {
-    if (tree) tree(zSquare, x, y);
-    else box(zSquare, x - 7, y - 7, 14, 14, 20, '--faceT:#b9cfa8;--faceA:#a9bd99;--faceB:#b2c6a1');
-  }
-  for (i = 0; i < 6; i++) { put(34 + i * 60, 16); put(34 + i * 60, 214); }
-  for (i = 0; i < 3; i++) { put(16, 70 + i * 50); put(354, 70 + i * 50); }
-})();
+/* v7: planter-tree ring removed at client request — open plaza edge */
 
 /* scale RC track pad: 1:14 / 1:10 / 1:7 running an oval */
 (function () {
@@ -877,17 +896,33 @@ rect(gMall, 'spine', 186, 435, 1044, 175, 'transform:translateZ(3px)');
 rect(gMall, 'spineline', 186, 521, 1044, 3, 'transform:translateZ(4px)');
 label(gMall, 760, 300, 20, 'Millenia Walk');
 
-/* ---- 3.4 South Entrance + taxi stand / pick-up (far west) ---------------- */
+/* ---- 3.4 South Entrance + taxi stand / pick-up (far west) ----------------
+   v7: the entrance is a SLIM SLIDING DOOR (two glass panels with an open gap
+   under a thin canopy), and the road runs VERTICALLY past it, dressed as a
+   race track: red-white kerbs both sides + dashed centre line.              */
 (function () {
-  shadow(gMall, 60, 452, 60, 140);
-  box(gMall, 60, 452, 60, 140, 38);                       /* entrance portal    */
-  label(gMall, 90, 434, 44, 'South Entrance', 'sm');
-  rect(gGround, 'walk', 118, 480, 66, 92, 'transform:translateZ(3px)');
+  /* sliding door: two slim glass panels, gap between = door standing open */
+  shadow(gMall, 66, 452, 12, 140);
+  box(gMall, 68, 452, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 68, 532, 8, 60, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 62, 446, 20, 152, 3, 'transform:translateZ(33px);--faceT:#c5cbd0'); /* canopy */
+  label(gMall, 72, 434, 42, 'South Entrance', 'sm');
+  rect(gGround, 'walk', 84, 480, 100, 92, 'transform:translateZ(3px)');
 
-  rect(gGround, 'road',     18, 630, 150, 54, 'transform:translateZ(1px)');
-  rect(gGround, 'roadline', 18, 655, 150,  3, 'transform:translateZ(2px)');
-  box(gMall, 26, 602, 60, 22, 16);                        /* taxi shelter       */
-  label(gMall, 93, 696, 6, 'Taxi stand · pick-up point', 'sm det');
+  /* vertical race-track road: kerbs + centre dashes, running north-south */
+  var RX = 8, RW = 50, RY = 470, RH = 420;
+  rect(gGround, 'road', RX, RY, RW, RH, 'transform:translateZ(1px)');
+  ['0', (RW - 4) + 'px'].forEach(function (edge) {
+    rect(gGround, '', RX + parseFloat(edge), RY, 4, RH,
+      'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
+      '#c8443a 0 9px, #f2f3f4 9px 18px)');
+  });
+  rect(gGround, '', RX + RW / 2 - 1.5, RY, 3, RH,
+    'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
+    '#e8eaec 0 11px, transparent 11px 24px)');
+
+  box(gMall, 96, 606, 60, 22, 16);                        /* taxi shelter       */
+  label(gMall, 128, 696, 6, 'Taxi stand · pick-up point', 'sm det');
 })();
 
 /* ---- 3.5 faded retail units lining both sides of the spine --------------
@@ -1077,10 +1112,11 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
   label(gMall, 662, 438, 8, 'Escalators', 'sm det');
 
-  box(gMall, 716, 450, 66, 46, 16, '--ol:.62');
-  label(gMall, 749, 440, 22, 'SG 1', 'sm det');
-  box(gMall, 800, 552, 66, 46, 16, '--ol:.62');
-  label(gMall, 833, 542, 22, 'SG 2', 'sm det');
+  /* v7: the two kiosks in front of Lift Lobby A sit aligned in one line */
+  box(gMall, 700, 470, 66, 46, 16, '--ol:.62');
+  label(gMall, 733, 460, 22, 'SG 1', 'sm det');
+  box(gMall, 776, 470, 66, 46, 16, '--ol:.62');
+  label(gMall, 809, 460, 22, 'SG 2', 'sm det');
 })();
 
 /* ---- 3.8 (v4) OFFICIAL F1 MERCHANDISE moved INSIDE the Great Hall --------
@@ -1144,6 +1180,8 @@ var liftL1 = (function () {
   b.setAttribute('aria-label', 'Lift Lobby A — switch to Basement 1');
   label(gLiftL1, LOBBY.x + LOBBY.w / 2, LOBBY.y - 18, LOBBY.z + 10, 'Lift Lobby A', 'sm');
   label(gLiftL1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h + 18, 8, 'tap to change level', 'sm det');
+  /* v7: floating map pin so the lobby reads as THE wayfinding anchor */
+  label(gLiftL1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h / 2, LOBBY.z + 30, '', 'pin');
   return b;
 })();
 
@@ -1232,7 +1270,9 @@ var DRIFT_PATH =
   var KART_DUR  = 19;                       /* must match the .kart CSS --dur */
   var kartAcc   = ['#efa227', '#3f7fd6', '#c8443a', '#3f9d6d', '#8a6bc4', '#d9564a'];
   var kartHelm  = ['#f4f7f9', '#ffd873', '#eef1f3', '#ffd2dc', '#cfeaff', '#fff0c2'];
-  var KART_BODY = '<i class="kb0"></i><i class="kb1"></i><i class="kcp"></i>' +
+  var KART_BODY = '<i class="ksh"></i>' +
+                  '<i class="kw w1"></i><i class="kw w2"></i><i class="kw w3"></i><i class="kw w4"></i>' +
+                  '<i class="kb0"></i><i class="kb1"></i><i class="kcp"></i>' +
                   '<i class="drv-s"></i><i class="drv-a al"></i><i class="drv-a ar"></i>' +
                   '<i class="drv-h"></i>';
   /* v5: one 3D kart + two colour-streak trail segments per kart (no ghosts).
@@ -1273,25 +1313,28 @@ zDisplay.style.setProperty('--accent', '#34a06a');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zDisplay);
 label(zDisplay, 175, 228, 10, 'Car Display & Lounge');
 
-/* six display pads at jaunty angles, each with a placeholder supercar */
+/* six display pads at jaunty angles. v7: RECOGNISABLE cars via PROPS.realCar —
+   R34 (big wing), 911 (teardrop, ducktail), R35 (wide + low wing), Silvia S15
+   (long bonnet, lip spoiler); the 911 and Silvia repeat in second colours.   */
 (function () {
   var pads = [
-    { x: 225, y:  48, r: -14, c: '#c8443a' },
-    { x: 310, y:  46, r:  11, c: '#2f6fc4' },
-    { x: 225, y: 105, r:  22, c: '#e0a72a' },
-    { x: 310, y: 103, r:  -8, c: '#3f9d6d' },
-    { x: 225, y: 162, r:  15, c: '#8a6bc4' },
-    { x: 310, y: 160, r: -20, c: '#3b4148' }
+    { x: 225, y:  48, r: -14, m: 'r34',    c: '#3f5f8f' },   /* Bayside-ish blue */
+    { x: 310, y:  46, r:  11, m: '911',    c: '#c8443a' },
+    { x: 225, y: 105, r:  22, m: 'r35',    c: '#5b6068' },
+    { x: 310, y: 103, r:  -8, m: 'silvia', c: '#e0a72a' },
+    { x: 225, y: 162, r:  15, m: '911',    c: '#3f9d6d' },
+    { x: 310, y: 160, r: -20, m: 'silvia', c: '#eef1f3' }
   ];
-  var car = prop('supercar');
+  var car = prop('realCar'), fallback = prop('supercar');
   /* props build from z 0 up; the cars ride a layer lifted clear of their pads
-     (z 4) so the 5px-tall wheel blocks are not swallowed by the pad slab */
+     (z 4) so the wheel blocks are not swallowed by the pad slab */
   var carLayer = el('', 'position:absolute;left:0;top:0;width:100%;height:100%;' +
                         'transform-style:preserve-3d;transform:translateZ(5px)', zDisplay);
   pads.forEach(function (p) {
     rect(zDisplay, 'carpad', p.x - 37, p.y - 23, 74, 46,
          'transform:translateZ(4px) rotateZ(' + p.r + 'deg)');
-    if (car) car(carLayer, p.x, p.y, p.r, p.c);
+    if (car) car(carLayer, p.x, p.y, p.r, p.m, p.c);
+    else if (fallback) fallback(carLayer, p.x, p.y, p.r, p.c);
     else box(carLayer, p.x - 23, p.y - 11, 46, 22, 13,
              'transform:rotateZ(' + p.r + 'deg);--faceT:' + p.c);
   });
@@ -1344,6 +1387,7 @@ var liftB1 = (function () {
   b.setAttribute('tabindex', '0');
   b.setAttribute('aria-label', 'Lift Lobby A — switch to Level 1');
   label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y - 18, 42, 'Lift Lobby A', 'sm');
+  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h / 2, 62, '', 'pin');
   label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h + 18, 6, 'tap to change level', 'sm det');
   return b;
 })();

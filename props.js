@@ -39,6 +39,7 @@
 
    ---- BUILDER FOOTPRINTS (plan px, before any rotation) -------------------
      supercar(parent,x,y,rotDeg,color)   ~46 x 22   body h12, cabin h9 (on roof)
+     realCar(parent,x,y,rotDeg,model,colour) ~46 x 20  see REAL CAR notes below
      loungeChair(parent,x,y,rotDeg)      ~16 x 14   seat h5, reclined back panel
      parasol(parent,x,y)                 ~30 x 30   canopy disc, pole h40
      planterTree(parent,x,y)             ~24 x 24   canopy disc, trunk h20
@@ -77,6 +78,18 @@
   var DARK_METAL = '--faceT:#4a4e52;--faceA:#2c2f32;--faceB:#3a3d41;';
   var BARK       = '--faceT:#8a7256;--faceA:#5c4a36;--faceB:#6f5a42;';
 
+  /* tinted glasshouse — same face triple relation as shadeStyle, but fixed
+     dark so glass never picks up the body colour. GLASS_FLAT is the matching
+     fill for `.flat` leaves (roof/backlight panels lying at a translateZ). */
+  var GLASS      = '--faceT:#39424b;--faceA:#212830;--faceB:#2b333b;';
+  var GLASS_FLAT = '#333c45';
+
+  /* one-line color-mix, same form the stylesheet + shadeStyle already use.
+     pct = how much of `c` survives, remainder is `other`. */
+  function mix(c, other, pct) {
+    return 'color-mix(in srgb, ' + c + ' ' + pct + '%, ' + other + ')';
+  }
+
   /* ==========================================================================
      BUILDERS
      ========================================================================== */
@@ -101,6 +114,157 @@
     H.box(w, W - 7, 1,     6, 6, 5, DARK_METAL);
     H.box(w, 1,     D - 7, 6, 6, 5, DARK_METAL);
     H.box(w, W - 7, D - 7, 6, 6, 5, DARK_METAL);
+  }
+
+  /* ==========================================================================
+     REAL CAR  —  recognisable stylised models
+     --------------------------------------------------------------------------
+     Footprint ~46 x 20 plan px (10px = 1m, so 4.6m long / 1.7m wide / ~1.35m
+     tall — real proportions). LOCAL AXES, before the wrap's rotateZ:
+
+         x = 0 .......... TAIL            x = 46 ......... NOSE
+         y = 0 (north edge) ... y = 20 (south edge)
+
+     At the default camera (rotateX 58 / rotateZ -38) the visible quads are the
+     TOP, the SOUTH flank (--faceA) and the WEST end (--faceB) — i.e. with the
+     nose at +x the TAIL faces the viewer, which is where every model carries
+     its loudest cue (wing / ducktail / lip spoiler / taillights).
+
+     MASSING RECIPE shared by all four models:
+       1  soft ground shadow
+       2  rocker/sill box   — the "darker base layer", shadeStyle() of a
+                              blackened base, z 0 -> ~3
+       3  main body box     — shadeStyle(colour); its own .f.top IS the
+                              "lighter top deck", z ~3 -> beltline
+       4  shaping leaves    — `.flat` rects with border-radius at translateZ,
+                              parked +0.05px above the box top so they never
+                              z-fight the face they sit on. These carry the
+                              PLAN silhouette, which is what actually reads
+                              from a 58deg top-down camera.
+       5  greenhouse box    — GLASS face triple, sat on the beltline
+       6  model cue parts   — wing / lip / taillights
+       7  4 dark wheel blocks, ~2.5px proud of the body sides
+
+     MODEL CUES
+       r34    boxy square-cut body, short front + rear decks, upright
+              greenhouse, LARGE rear wing on two struts raised ABOVE roof
+              height, twin round red taillights on a vertical tail panel.
+       911    heavy elliptical nose + rounded tail, a flared rear haunch leaf
+              wider than the body, a dark backlight leaf running from the roof
+              down over the rear deck (fastback teardrop), small ducktail lip,
+              NO wing.
+       r35    widest + tallest of the set, square corners everywhere, angular
+              bonnet leaf, chunky square tail, low straight wing on two short
+              stand-offs sat BELOW roof height.
+       silvia lowest body, long flat bonnet leaf ending in a true elliptical
+              point, slim greenhouse pushed rearward, thin boot lip spoiler.
+     ========================================================================== */
+
+  /* 4 dark wheel blocks. rx/fx = rear + front axle x, ny/sy = north + south
+     wheel y (set outside the body's own y range so they read as proud). */
+  function wheels(w, rx, fx, ny, sy, ww) {
+    H.box(w, rx, ny, ww, 4, 4.5, DARK_METAL);
+    H.box(w, rx, sy, ww, 4, 4.5, DARK_METAL);
+    H.box(w, fx, ny, ww, 4, 4.5, DARK_METAL);
+    H.box(w, fx, sy, ww, 4, 4.5, DARK_METAL);
+  }
+
+  /* a radius-shaped leaf: `.flat` rect with a border-radius and a fill,
+     floated to z. This is the only way to get a rounded PLAN outline — a
+     .box's faces are separate quads and ignore the box's own radius. */
+  function leaf(w, x, y, ww, hh, z, fill, radius) {
+    return H.rect(w, '', x, y, ww, hh,
+      'background:' + fill + ';border-radius:' + radius +
+      ';transform:translateZ(' + z + 'px)');
+  }
+
+  function realCar(parent, x, y, rotDeg, model, colour) {
+    var base = colour || '#8a9096';
+    var W = 46, D = 20;
+    var w = wrap(parent, x, y, W, D, rotDeg);
+    H.shadow(w, 0, 0, W, D);
+
+    var body = shadeStyle(base);                    /* main volume          */
+    var sill = shadeStyle(mix(base, 'black', 74));  /* darker base layer    */
+    var deck = mix(base, 'white', 84);              /* lighter top deck     */
+    var hump = mix(base, 'white', 90);              /* haunch / boot deck   */
+    var trim = mix(base, 'black', 80);              /* wings + lips         */
+    var m = model || 'r34';
+
+    if (m === '911') {
+      /* --- PORSCHE 911 (996/997) — rounded, fastback, no wing ------------ */
+      H.box(w, 5, 3.5, W - 10, D - 7, 3, sill);
+      H.box(w, 3, 2, W - 6, D - 4, 6, body + 'transform:translateZ(3px);');
+      /* full-length silhouette leaf: elliptical nose (11 x 8 radius on a
+         16-tall leaf = a true half-ellipse), softly rounded tail */
+      leaf(w, 1, 2, 44, 16, 9.05, deck, '6px 11px 11px 6px / 6px 8px 8px 6px');
+      /* rear haunch leaf — 18 wide against the body's 16: wider at the rear */
+      leaf(w, 0.5, 1, 19, 18, 9.1, hump, '7px 3px 3px 7px');
+      /* greenhouse, then a dark backlight leaf sloping out over the rear
+         deck — the two dark shapes merge into one teardrop = fastback */
+      H.box(w, 15, 4.5, 14, 11, 3.5, GLASS + 'transform:translateZ(9px);');
+      leaf(w, 5, 5, 26, 10, 11, GLASS_FLAT, '5px 3px 3px 5px');
+      /* ducktail: a lip, not a wing — barely above the deck */
+      leaf(w, 1.5, 3, 6, 14, 10.2, trim, '4px 1px 1px 4px');
+      wheels(w, 3, 33, -0.5, 16.5, 7);
+
+    } else if (m === 'r35') {
+      /* --- NISSAN GT-R R35 — wide, angular, low straight wing ------------ */
+      H.box(w, 2.5, 2.5, W - 5, D - 5, 4, sill);
+      /* widest + tallest body of the set, square corners throughout */
+      H.box(w, 1.5, 1.5, W - 3, D - 3, 5.5, body + 'transform:translateZ(4px);');
+      /* angular bonnet leaf — deliberately tiny radii next to the 911's */
+      leaf(w, 25, 2, 20, 16, 9.55, deck, '1px 4px 4px 1px');
+      H.box(w, 10, 4, 16, 12, 4, GLASS + 'transform:translateZ(9.5px);');
+      /* two SHORT stand-offs -> the wing sits at z 12, below the 13.5 roof */
+      H.box(w, 4, 4.5,  2.5, 2, 2.5, DARK_METAL + 'transform:translateZ(9.5px);');
+      H.box(w, 4, 13.5, 2.5, 2, 2.5, DARK_METAL + 'transform:translateZ(9.5px);');
+      leaf(w, 1.5, 1, 8, 18, 12, trim, '1.5px');
+      wheels(w, 4, 32, -1, 17, 8);
+
+    } else if (m === 'silvia') {
+      /* --- NISSAN SILVIA S15 — low wedge, long bonnet, pointed nose ------ */
+      H.box(w, 4, 4, W - 8, D - 8, 2.5, sill);
+      /* lowest beltline in the set (z 7 vs the R35's 9.5) */
+      H.box(w, 2.5, 3, W - 5, D - 6, 4.5, body + 'transform:translateZ(2.5px);');
+      /* long flat bonnet — half the car — ending in a 13 x 6.5 radius on a
+         13-tall leaf, i.e. a full half-ellipse = pointed nose */
+      leaf(w, 21, 3.5, 23, 13, 7.05, deck,
+           '1px 13px 13px 1px / 1px 6.5px 6.5px 1px');
+      /* slim greenhouse pushed rearward: only 6px of boot behind it */
+      H.box(w, 7.5, 5, 13.5, 10, 3.5, GLASS + 'transform:translateZ(7px);');
+      leaf(w, 2.5, 4, 6.5, 12, 7.05, hump, '4px 1px 1px 4px');
+      /* thin boot lip spoiler — 1px of stand-off, no struts */
+      leaf(w, 2.5, 3.5, 3.5, 13, 8, trim, '3px 1px 1px 3px');
+      wheels(w, 5, 31, 0.5, 15.5, 7);
+
+    } else {
+      /* --- NISSAN SKYLINE GT-R R34 — boxy, big wing, round taillights ---- */
+      H.box(w, 3, 3, W - 6, D - 6, 3.5, sill);
+      /* square-cut slab, no shaping leaf at all: the R34 IS the box */
+      H.box(w, 2, 2, W - 4, D - 4, 6, body + 'transform:translateZ(3.5px);');
+      /* upright greenhouse, short decks either side (16 front / 8 rear) */
+      H.box(w, 11, 3.5, 17, 13, 4, GLASS + 'transform:translateZ(9.5px);');
+      /* THE giveaway: two tall struts off the boot carrying a large blade
+         at z 15.5 — 2px clear ABOVE the 13.5 roofline */
+      H.box(w, 4.5, 4,    2.5, 2.5, 6, DARK_METAL + 'transform:translateZ(9.5px);');
+      H.box(w, 4.5, 13.5, 2.5, 2.5, 6, DARK_METAL + 'transform:translateZ(9.5px);');
+      leaf(w, 1.5, 1.5, 8, 17, 15.5, trim, '2px');
+      /* twin round taillights: ONE vertical panel standing on the tail,
+         hinged exactly like a .box's own .f.sx west quad (transform-origin
+         0% 50% + rotateY(-90deg) maps the element's width axis onto +z, so
+         translateX after the rotation lifts it to z 6..9.6). Both lamps are
+         painted with radial-gradients so the pair costs a single node.
+         left:1.7 keeps it 0.3px proud of the body's own west face at x=2. */
+      H.rect(w, '', 1.7, 3, 3.6, 14,
+        'transform-origin:0% 50%;transform:rotateY(-90deg) translateX(6px);' +
+        'background:' +
+        'radial-gradient(circle at 50% 18%, #e6483c 0 1.5px, rgba(0,0,0,0) 1.6px),' +
+        'radial-gradient(circle at 50% 82%, #e6483c 0 1.5px, rgba(0,0,0,0) 1.6px),' +
+        '#2b3034;border-radius:1px');
+      wheels(w, 5, 32, -0.5, 16.5, 7);
+    }
+    return w;
   }
 
   /* loungeChair — seat slab + a reclined backrest panel hinged off the
@@ -197,6 +361,7 @@
   window.PROPS = {
     init: function (helpers) { H = helpers; },
     supercar: supercar,
+    realCar: realCar,
     loungeChair: loungeChair,
     parasol: parasol,
     planterTree: planterTree,
