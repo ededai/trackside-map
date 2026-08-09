@@ -94,8 +94,15 @@ body.wall-e .f.sx { left: 100%; }    /* hinge on the east edge instead  */
 
 /* flat = anything lying on a ground plane (slabs, roads, pens, shadows) */
 .flat { position: absolute; display: block; background: #e6e8e9; }
-.shd  { position: absolute; display: block; background: rgba(30,36,42,.055);
-        border-radius: 10px; box-shadow: 0 0 26px 14px rgba(30,36,42,.045);
+/* PERF: the soft edge is BAKED INTO a radial gradient. The old
+   `box-shadow: 0 0 26px 14px` painted a large blurred spread outside the
+   element's own box, which the compositor had to re-raster whenever anything
+   under it moved — expensive on phones, and there is one per footprint. */
+.shd  { position: absolute; display: block;
+        background: radial-gradient(ellipse at 50% 50%,
+                      rgba(30,36,42,.075) 0 46%,
+                      rgba(30,36,42,.030) 70%, transparent 88%);
+        border-radius: 10px;
         opacity: calc(var(--os,1) * var(--oz,1)); transition: opacity .55s ease; }
 
 /* ========================= GROUND ======================================== */
@@ -203,9 +210,14 @@ body.z-far .lbl.sm { opacity: 0; }
 .kart > i { position: absolute; display: block;
             opacity: calc(var(--os,1) * var(--oz,1));
             transition: opacity .55s ease; }
+/* PERF: no filter. A blur() on a MOVING element re-rasters every single
+   frame, and there are six karts on the course — the soft edge is baked into
+   the radial gradient instead, which costs nothing per frame. */
 .kart > i.ksh { left: -1px; top: -1.5px; right: -1px; bottom: -1.5px;   /* ground shadow */
-                border-radius: 6px; background: rgba(20,26,32,.30);
-                filter: blur(2px); transform: translateZ(.3px); }
+                border-radius: 6px;
+                background: radial-gradient(ellipse at 50% 50%,
+                              rgba(20,26,32,.32) 0 55%, transparent 75%);
+                transform: translateZ(.3px); }
 .kart > i.kw  { width: 4.5px; height: 3px; border-radius: 1px;          /* 4 wheels */
                 background: #22262b; transform: translateZ(1.5px); }
 .kart > i.kw.w1 { left: 2px;    top: -1.4px; }
@@ -253,9 +265,12 @@ body.z-far .lbl.sm { opacity: 0; }
 .ktrail {
   position: absolute; left: 0; top: 0; width: 44px; height: 8px;
   margin: -4px 0 0 -22px; border-radius: 4px;
-  background: linear-gradient(90deg, transparent, var(--accent, #7d848a) 82%);
+  /* PERF: no filter. Twelve trail segments animate on the course at once and
+     a blur() on each is a per-frame raster. The taper IS the softening: the
+     gradient starts at transparent and ramps late, so the tail feathers out
+     on its own. */
+  background: linear-gradient(90deg, transparent 0 6%, var(--accent, #7d848a) 88%);
   opacity: calc(var(--os,1) * var(--oz,1) * var(--tl, .38));
-  filter: blur(.6px);
   offset-path: var(--path);
   offset-rotate: auto;
   animation: lap var(--dur, 19s) linear infinite;
@@ -528,6 +543,44 @@ body.xray #gSurface { --os: .12; }
           padding: 14px 15px 13px; }
   #card h2 { font-size: 15px; }
   #card li { font-size: 11.5px; }
+}
+
+/* ==========================================================================
+   COARSE POINTER (phones / tablets) — PERFORMANCE PASS
+   --------------------------------------------------------------------------
+   backdrop-filter is by far the most expensive thing on this page. Every
+   frame, the compositor has to re-sample the animating 3D scene behind each
+   blurred panel and re-blur that region — and the scene NEVER stops moving
+   (karts, RC cars, crowd dots, idle breathing). On a phone that costs more
+   than the whole world render. So: drop the blur, and lift the panel alpha
+   from .92/.93/.95 to .97 so the chrome stays exactly as legible over it.
+   The same block also trims the two other per-frame offenders on touch: the
+   zone glow's 34px spread shadow and the crowd dots' opacity transitions.
+   Placed AFTER the desktop layout block on purpose — a touch laptop matches
+   both, and the perf rules must win.
+   ========================================================================== */
+@media (pointer: coarse) {
+  #brand, #dock, #hud, #views, #card {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  #brand { background: rgba(255,255,255,.97); }
+  #dock  { background: rgba(255,255,255,.97); }
+  #views { background: rgba(255,255,255,.97); }
+  #card  { background: rgba(255,255,255,.97); }
+  #hud   { background: rgba(255,255,255,.97); }
+
+  /* zone glow: keep the tight outer ring, drop the 34px spread glow layer —
+     a large blurred shadow redrawn over a live scene */
+  .zglow { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); }
+
+  /* ~60 crowd dots, each carrying an opacity transition that every dim /
+     x-ray change animates simultaneously. Snap instead. */
+  .dotwrap { transition: none; }
+}
+/* Touch-screen laptops still get the DESKTOP panel layout, where #brand and
+   #dock are bare children of the #hud card and must stay transparent. */
+@media (pointer: coarse) and (min-width: 900px) and (min-height: 560px) {
+  #brand, #dock { background: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -842,9 +895,9 @@ var LOBBY   = { x: 750, y: 622, w: 64, h: 61, z: 37 };   /* centre = 782, 652.5 
 
 /* ---- 3.1 ground plaza ---------------------------------------------------
    v9: the old Raffles Boulevard strip along the NORTH edge (900,30) is GONE.
-   The site now carries ONE coherent road — the F1 street circuit built in
-   3.4b, which runs the west and south edges. The boulevard NAME survives, on
-   the south straight.                                                       */
+   v10: the site carries ONE road — the F1 straight built in 3.4b, which runs
+   the WEST edge only (the map's short side, by the south entrance). The
+   boulevard NAME survives, on that straight.                                */
 rect(gGround, 'plaza', 30, 40, 1380, 860);
 /* walkway linking the Great Hall to Monument Square, across the building line */
 rect(gGround, 'walk', 1062, 306, 96, 112, 'transform:translateZ(3px)');
@@ -938,83 +991,49 @@ label(gMall, 760, 300, 20, 'Millenia Walk');
   label(gMall, 128, 696, 6, 'Taxi stand · pick-up point', 'sm det');
 })();
 
-/* ---- 3.4b F1 STREET CIRCUIT — the perimeter road ------------------------
-   v9: the single vertical strip that used to sit outside the entrance is
-   replaced by a track that SPANS THE EDGES of the site, the way a street
-   circuit wraps a city block, with breathing space off the building line:
+/* ---- 3.4b F1 STREET CIRCUIT — the west-edge straight ---------------------
+   v10 (client): the circuit belongs on the map's SHORT side ONLY — the WEST
+   edge, where the South Entrance and the taxi stand are. The v9 south (long)
+   straight, the south-west left-hander and every south-edge kerb are DELETED.
+   What is left is ONE clean vertical straight running the full height:
 
-     WEST straight   x    8 ..   58,  y 430 .. 886   (runs south)
-     SOUTH straight  y  836 ..  886,  x   8 .. 1410  (runs east, exits frame)
-     CORNER          a left-hander at the south-west: the two tarmac rects
-                     overlap in the 50 x 50 corner square, and the kerbs +
-                     centre line are carried round it by three SVG arcs
-                     concentric on the inside apex (58,836):
-                       outer kerb  r 48   inner kerb r 16   centre line r 25
-     START/FINISH    8 x 8 chequer band across the south straight at x 148,
-                     right outside the relocated south entrance
+     WEST straight   x    8 ..   58,  y  40 .. 900   (runs south, full height)
+     KERBS           4px strips on BOTH long edges, 9px red / 9px white
+     CENTRE LINE     dashed, down the middle of the tarmac
+     START/FINISH    8 x 8 chequer band laid ACROSS the straight at y 500-520,
+                     level with the south entrance walk
 
-   Every kerb is the same 9px red / 9px white rhythm as v7, angled per
-   orientation (180deg on the west straight, 90deg on the south straight).
-   The arcs get it by stacking a solid white stroke under a 9/9 dashed red
-   one — a repeating gradient cannot follow a curve.                         */
+   The kerb rhythm is the same 9px red / 9px white as v7, angled 180deg for
+   this vertical run. No arcs are needed any more — there is no corner.      */
 (function () {
-  var WX = 8, WW = 50, WY = 430;               /* west straight               */
-  var SY = 836, SD = 50, SX2 = 1410;           /* south straight              */
-  var IN_X = WX + WW, IN_Y = SY;               /* (58,836) = inside apex      */
+  var WX = 8, WW = 50, WY = 40, WH = 860;      /* west straight, y 40 .. 900  */
   var KV = 'repeating-linear-gradient(180deg,#c8443a 0 9px,#f2f3f4 9px 18px)';
-  var KH = 'repeating-linear-gradient(90deg,#c8443a 0 9px,#f2f3f4 9px 18px)';
 
-  /* tarmac — the WEST rect runs all the way down to y 886 so it already owns
-     the 50 x 50 corner square; the SOUTH rect therefore starts at x 58 and
-     butts against it. Nothing is coplanar-overlapped, so nothing z-fights. */
-  rect(gGround, 'road', WX,   WY, WW,          (SY + SD) - WY, 'transform:translateZ(1px)');
-  rect(gGround, 'road', IN_X, SY, SX2 - IN_X,  SD,             'transform:translateZ(1px)');
+  /* tarmac */
+  rect(gGround, 'road', WX, WY, WW, WH, 'transform:translateZ(1px)');
 
-  /* kerbs, both edges of both straights. Each strip stops where its arc
-     takes over: the OUTER pair at the r48 arc, the INNER pair at the r16. */
-  rect(gGround, '', WX,       WY, 4, IN_Y - WY,       /* west  outer (west edge) */
+  /* kerbs, both long edges, full height */
+  rect(gGround, '', WX,          WY, 4, WH,        /* west (outer) edge */
        'transform:translateZ(2px);background:' + KV);
-  rect(gGround, '', IN_X - 4, WY, 4, (IN_Y - 14) - WY, /* west inner (east edge) */
+  rect(gGround, '', WX + WW - 4, WY, 4, WH,        /* east (inner) edge */
        'transform:translateZ(2px);background:' + KV);
-  rect(gGround, '', IN_X + 14, SY, SX2 - (IN_X + 14), 4,   /* south inner (north) */
-       'transform:translateZ(2px);background:' + KH);
-  rect(gGround, '', IN_X, SY + SD - 4, SX2 - IN_X, 4,      /* south outer (south) */
-       'transform:translateZ(2px);background:' + KH);
 
-  /* dashed centre line down each straight */
-  rect(gGround, '', WX + WW / 2 - 1.5, WY, 3, IN_Y - WY,
+  /* dashed centre line down the straight */
+  rect(gGround, '', WX + WW / 2 - 1.5, WY, 3, WH,
     'transform:translateZ(2px);background:repeating-linear-gradient(180deg,' +
     '#e8eaec 0 11px, transparent 11px 24px)');
-  rect(gGround, '', IN_X, SY + SD / 2 - 1.5, SX2 - IN_X, 3,
-    'transform:translateZ(2px);background:repeating-linear-gradient(90deg,' +
-    '#e8eaec 0 11px, transparent 11px 24px)');
 
-  /* the corner. viewBox is offset so the arcs stay in WORLD coordinates. */
-  var csvg = svgNS('svg', { width: 120, height: 130, viewBox: '0 790 120 130',
-    style: 'position:absolute;left:0;top:790px;overflow:visible;' +
-           'background:none;transform:translateZ(2px)', class: 'flat' }, gGround);
-  function kerbArc(d) {
-    svgNS('path', { d: d, fill: 'none', stroke: '#f2f3f4', 'stroke-width': 4 }, csvg);
-    svgNS('path', { d: d, fill: 'none', stroke: '#c8443a', 'stroke-width': 4,
-                    'stroke-dasharray': '9 9' }, csvg);
-  }
-  kerbArc('M 10 836 A 48 48 0 0 0 58 884');    /* outer kerb, r48 */
-  kerbArc('M 56 822 A 16 16 0 0 0 72 838');    /* inner apex kerb, r16 */
-  svgNS('path', { d: 'M 33 836 A 25 25 0 0 0 58 861', fill: 'none',
-                  stroke: '#e8eaec', 'stroke-width': 3,
-                  'stroke-dasharray': '11 13' }, csvg);
-
-  /* START / FINISH — 8 x 8 chequer, laid between the kerbs of the south
-     straight, directly outside the relocated south entrance (x 124-132) */
-  rect(gGround, '', 148, SY + 4, 20, SD - 8,
+  /* START / FINISH — 8 x 8 chequer, laid ACROSS the straight between the two
+     kerbs, level with the south entrance walk (y 480-572) */
+  rect(gGround, '', WX + 4, 500, WW - 8, 20,
     'transform:translateZ(2.4px);background-color:#f2f3f4;' +
     'background-image:linear-gradient(45deg,#22262b 25%,transparent 25%,' +
     'transparent 75%,#22262b 75%),linear-gradient(45deg,#22262b 25%,' +
     'transparent 25%,transparent 75%,#22262b 75%);' +
     'background-size:16px 16px;background-position:0 0,8px 8px');
 
-  /* the boulevard name, moved off the deleted north strip onto the circuit */
-  label(gGround, 700, SY + SD / 2, 5, 'Raffles Boulevard', 'sm det');
+  /* the boulevard name, billboarded on the straight above the chequer */
+  label(gGround, 33, 470, 5, 'Raffles Boulevard', 'sm det');
 })();
 
 /* ---- 3.5 faded retail units lining both sides of the spine --------------
@@ -2220,14 +2239,15 @@ Phone portrait is the PRIMARY case (QR code at the mall). Test 1 to 6 on a
     purple-posted partition labelled RC HOLDER just inside the east wall.
     Every shelf carries stocked colour tiers on its side faces plus boxed
     stock on top. Nothing overlaps the partition or the party wall.
-15. F1 STREET CIRCUIT (v9) — there is exactly ONE road on the site and it hugs
-    the EDGES: a west straight running south, a rounded left-hander at the
-    south-west corner, then a long south straight running east out of frame.
-    Red/white kerbs on BOTH edges of BOTH straights, dashed centre line on each,
-    and the kerbs + centre line carry cleanly round the corner on their arcs
-    with no gap and no kink. The chequered start/finish band sits on the south
-    straight outside the south entrance. The old Raffles Boulevard strip along
-    the NORTH edge is GONE; the name now sits on the south straight.
+15. F1 STREET CIRCUIT (v10) — there is exactly ONE road on the site and it runs
+    the map's SHORT side ONLY: a single vertical straight down the WEST edge
+    (x 8-58) for the full height of the plan (y 40-900), alongside the south
+    entrance and the taxi stand. Red/white kerbs on BOTH long edges and a
+    dashed centre line down the middle, all running end to end with no gap.
+    The chequered start/finish band lies ACROSS the straight at y 500-520,
+    level with the entrance walk, and 'Raffles Boulevard' sits just above it.
+    There is NO south straight, NO corner arc and NO kerb along the south edge
+    any more; the old NORTH-edge boulevard strip is still gone too.
 16. SOUTH ENTRANCE GAP (v9) — the sliding door stands at x 124-132, roughly
     half the old dead run to the South Galleria 4A wall at x 190. Shadow, both
     door panels, canopy, label and the walk strip all moved together; the taxi
