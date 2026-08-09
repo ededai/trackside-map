@@ -1556,16 +1556,19 @@ label(zDisplay, 175, 228, 10, 'Car Display & Lounge');
 
 /* ---- 3.15 LIFT LOBBY A on B1 — directly under the L1 lobby -------------- */
 var liftB1 = (function () {
-  rect(gLiftB1, 'liftring', LOBBY.x - 21, LOBBY.y - 19, LOBBY.w + 42, LOBBY.h + 38, '');
-  var b = box(gLiftB1, LOBBY.x, LOBBY.y, LOBBY.w, LOBBY.h, 32,
+  /* v11: B1 lobby sits closer to its nearest pillar (the x~720 column),
+     tucked slightly behind it — B1-only offset, L1 lobby unmoved */
+  var BX = LOBBY.x - 62, BY = LOBBY.y - 26;
+  rect(gLiftB1, 'liftring', BX - 21, BY - 19, LOBBY.w + 42, LOBBY.h + 38, '');
+  var b = box(gLiftB1, BX, BY, LOBBY.w, LOBBY.h, 32,
               '--faceT:#dae3f2;--faceA:#c3cee0;--faceB:#ccd6e6');
   b.classList.add('liftlink');
   b.setAttribute('role', 'button');
   b.setAttribute('tabindex', '0');
   b.setAttribute('aria-label', 'Lift Lobby A — switch to Level 1');
-  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y - 18, 42, 'Lift Lobby A', 'sm');
-  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h / 2, 62, '', 'pin');
-  label(gLiftB1, LOBBY.x + LOBBY.w / 2, LOBBY.y + LOBBY.h + 18, 6, 'tap to change level', 'sm det');
+  label(gLiftB1, BX + LOBBY.w / 2, BY - 18, 42, 'Lift Lobby A', 'sm');
+  label(gLiftB1, BX + LOBBY.w / 2, BY + LOBBY.h / 2, 62, '', 'pin');
+  label(gLiftB1, BX + LOBBY.w / 2, BY + LOBBY.h + 18, 6, 'tap to change level', 'sm det');
   return b;
 })();
 
