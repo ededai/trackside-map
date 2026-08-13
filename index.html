@@ -197,8 +197,8 @@ body.z-far .lbl.sm { opacity: 0; }
    body, cockpit and driver stack in actual Z. Dim / x-ray opacity applies
    per leaf instead.                                                        */
 .kart {
-  position: absolute; left: 0; top: 0; width: 24px; height: 13px;
-  margin: -6.5px 0 0 -12px;
+  position: absolute; left: 0; top: 0; width: 32px; height: 17px;
+  margin: -8.5px 0 0 -16px;
   transform-style: preserve-3d;
   offset-path: var(--path);
   offset-rotate: auto;   /* v7: true tangent-following — straight on straights,
@@ -218,12 +218,12 @@ body.z-far .lbl.sm { opacity: 0; }
                 background: radial-gradient(ellipse at 50% 50%,
                               rgba(20,26,32,.32) 0 55%, transparent 75%);
                 transform: translateZ(.3px); }
-.kart > i.kw  { width: 4.5px; height: 3px; border-radius: 1px;          /* 4 wheels */
-                background: #22262b; transform: translateZ(1.5px); }
-.kart > i.kw.w1 { left: 2px;    top: -1.4px; }
-.kart > i.kw.w2 { left: 2px;    bottom: -1.4px; }
-.kart > i.kw.w3 { right: 3px;   top: -1.4px; }
-.kart > i.kw.w4 { right: 3px;   bottom: -1.4px; }
+.kart > i.kw  { width: 6px; height: 4px; border-radius: 1.2px;          /* 4 wheels */
+                background: #22262b; transform: translateZ(2px); }
+.kart > i.kw.w1 { left: 2.5px;  top: -1.8px; }
+.kart > i.kw.w2 { left: 2.5px;  bottom: -1.8px; }
+.kart > i.kw.w3 { right: 3.5px; top: -1.8px; }
+.kart > i.kw.w4 { right: 3.5px; bottom: -1.8px; }
 .kart > i.kb0 { inset: 0; border-radius: 4px;                  /* body base   */
                 background: color-mix(in srgb, var(--accent,#7d848a) 68%, #23282e); }
 /* v9: FOUR standing side quads — N / S / E / W walls, 4.5px tall, hinged on
@@ -233,38 +233,38 @@ body.z-far .lbl.sm { opacity: 0; }
    camera sees, the body still reads as a solid extruded volume rather than a
    pair of stacked flat decals. Darker shade of the kart's own accent so the
    walls sit in shadow under the kb1 top deck.                               */
-.kart > i.kwall    { background: color-mix(in srgb, var(--accent,#7d848a) 58%, #1a1f25); }
-.kart > i.kwall.wn { left: 0;    top: 0;    width: 24px;  height: 4.5px;
+.kart > i.kwall    { background: color-mix(in srgb, var(--accent,#7d848a) 45%, #14181c); }
+.kart > i.kwall.wn { left: 0;    top: 0;    width: 32px; height: 6px;
                      transform-origin: 50% 0%; transform: rotateX(90deg); }
-.kart > i.kwall.ws { left: 0;    top: 13px; width: 24px;  height: 4.5px;
+.kart > i.kwall.ws { left: 0;    top: 17px; width: 32px; height: 6px;
                      transform-origin: 50% 0%; transform: rotateX(90deg); }
-.kart > i.kwall.ww { left: 0;    top: 0;    width: 4.5px; height: 13px;
+.kart > i.kwall.ww { left: 0;    top: 0;    width: 6px;  height: 17px;
                      transform-origin: 0% 50%; transform: rotateY(-90deg); }
-.kart > i.kwall.we { left: 24px; top: 0;    width: 4.5px; height: 13px;
+.kart > i.kwall.we { left: 32px; top: 0;    width: 6px;  height: 17px;
                      transform-origin: 0% 50%; transform: rotateY(-90deg); }
 .kart > i.kb1 { inset: 1.5px 2px; border-radius: 3px;          /* body deck   */
                 background: var(--accent, #7d848a);
-                transform: translateZ(4.5px); }                /* caps the walls */
+                transform: translateZ(6px); }                  /* caps the walls */
 .kart > i.kb1::after {                                          /* nose shine  */
   content: ''; position: absolute; right: 1px; top: 2px; width: 4px; height: 6px;
   border-radius: 1.5px; background: rgba(255,255,255,.45);
 }
-.kart > i.kcp   { left: 5px; top: 2.5px; width: 12px; height: 8px; border-radius: 3px;
-                  background: rgba(30,35,41,.75); transform: translateZ(5.5px); }
-.kart > i.drv-s { left: 6.5px; top: 2px; width: 11px; height: 9px; border-radius: 4px;
-                  background: rgba(52,58,64,.92); transform: translateZ(7.5px); }
-.kart > i.drv-a { width: 4px; height: 2.2px; border-radius: 1px;
-                  background: rgba(52,58,64,.92); transform: translateZ(9px); }
-.kart > i.drv-a.al { left: 14px; top: 3px; }
-.kart > i.drv-a.ar { left: 14px; top: 7.8px; }
-.kart > i.drv-h { left: 9px; top: 3px; width: 7px; height: 7px;
+.kart > i.kcp   { left: 7px; top: 3.5px; width: 16px; height: 10px; border-radius: 4px;
+                  background: rgba(30,35,41,.75); transform: translateZ(7px); }
+.kart > i.drv-s { left: 9px; top: 2.5px; width: 14px; height: 12px; border-radius: 5px;
+                  background: rgba(52,58,64,.92); transform: translateZ(9.5px); }
+.kart > i.drv-a { width: 5.5px; height: 3px; border-radius: 1.2px;
+                  background: rgba(52,58,64,.92); transform: translateZ(11.5px); }
+.kart > i.drv-a.al { left: 19px; top: 4px; }
+.kart > i.drv-a.ar { left: 19px; top: 10.3px; }
+.kart > i.drv-h { left: 12px; top: 4px; width: 9px; height: 9px;
                   border-radius: 50%; background: var(--helm, #eef1f3);
-                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(11.5px); }
+                  box-shadow: 0 0 0 1px rgba(20,26,32,.38); transform: translateZ(14px); }
 /* --- v5 colour trail: tapered streaks chasing each kart on the same path.
    Two segments per kart at growing lag = a fading ribbon, no box ghosts.  */
 .ktrail {
-  position: absolute; left: 0; top: 0; width: 44px; height: 8px;
-  margin: -4px 0 0 -22px; border-radius: 4px;
+  position: absolute; left: 0; top: 0; width: 56px; height: 10px;
+  margin: -5px 0 0 -28px; border-radius: 5px;
   /* PERF: no filter. Twelve trail segments animate on the course at once and
      a blur() on each is a per-frame raster. The taper IS the softening: the
      gradient starts at transparent and ramps late, so the tail feathers out
@@ -1223,7 +1223,6 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
   /* --- WEST EDGE: cashier over a column of two shelves -------------------- */
   box(zGalleria, 198, 12, 14, 34, 30, '--faceT:#d3dae0;--faceA:#b6bec5;--faceB:#c2c9d0');
-  label(zGalleria, 226, 10, 34, 'Cashier', 'sm det');
   shelf(198,  56, 14, 42,  0, 0);
   shelf(198, 106, 14, 42,  6, 0);
 
@@ -1279,18 +1278,25 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
 /* ---- 3.7 mid-spine context: escalators + SG 1 / SG 2 kiosk pads ---------- */
 (function () {
-  rect(gMall, '', 644, 452, 14, 148,
+  /* v12: escalators run HORIZONTAL (flipped per client), stacked pair */
+  rect(gMall, '', 600, 496, 148, 14,
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
-  rect(gMall, '', 666, 452, 14, 148,
+  rect(gMall, '', 600, 518, 148, 14,
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
-  label(gMall, 662, 438, 8, 'Escalators', 'sm det');
+  label(gMall, 674, 486, 8, 'Escalators', 'sm det');
 
-  /* v8: the two kiosks sit CENTRED on the spine (not on its edge), aligned
-     in one line in front of Lift Lobby A */
+  /* v12: reception counter below the escalators, beside 4B's east side */
+  box(gMall, 580, 548, 40, 12, 14, '--faceT:#ded6c8;--faceA:#c9c0b0;--faceB:#d4cbbc');
+  label(gMall, 600, 572, 6, 'Reception', 'sm det');
+
+  /* v8: the two kiosks sit CENTRED on the spine, aligned in front of Lift
+     Lobby A. v12: the row is ELONGATED — a spacing, then a second pair.   */
   box(gMall, 711, 499, 66, 46, 16, '--ol:.62');
   label(gMall, 744, 489, 22, 'SG 1', 'sm det');
   box(gMall, 787, 499, 66, 46, 16, '--ol:.62');
   label(gMall, 820, 489, 22, 'SG 2', 'sm det');
+  box(gMall, 711, 427, 66, 46, 16, '--ol:.62');
+  box(gMall, 787, 427, 66, 46, 16, '--ol:.62');
 })();
 
 /* ---- 3.8 (v4) OFFICIAL F1 MERCHANDISE moved INSIDE the Great Hall --------
@@ -1328,10 +1334,11 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
      label above it never lands on the counter. */
   var stall = prop('merchStall');
   if (stall) stall(gMall, cx, cy + 23, 0);
-  else {
+ else {
     box(gMall, cx - 28, cy + 26, 56, 10, 14, '--faceT:#d8cfee;--faceA:#c6bbe0;--faceB:#cec4e6');
     box(gMall, cx - 28, cy +  8, 56,  6, 34, '--faceT:#cfc3ea;--faceA:#bdb0d8;--faceB:#c5b9e0');
   }
+
   label(gMall, cx, cy - 22, 30, 'Official F1 Merchandise', 'anchor');
 })();
 
@@ -1455,9 +1462,38 @@ var DRIFT_PATH =
   /* v5: one 3D kart + two colour-streak trail segments per kart (no ghosts).
      Trail lag is in seconds BEHIND the kart along the same path.            */
   var trailLag = [.5, .95], trailOp = [.38, .18];
+  /* v12: collision-free phases. The course self-intersects, so even spacing
+     can put two karts on the same crossing at once. Sample the real geometry
+     (getPointAtLength) and greedily pick 6 lap fractions maximising the
+     minimum kart-to-kart distance across a whole lap. Deterministic.      */
+  var PHASES = (function () {
+    var svgp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    svgp.setAttribute('d', DRIFT_PATH);
+    var L = svgp.getTotalLength(), STEPS = 40, chosen = [0], c, t, i;
+    function pt(fr) { return svgp.getPointAtLength((((fr % 1) + 1) % 1) * L); }
+    while (chosen.length < 6) {
+      var best = 0, bestMin = -1;
+      for (c = 1; c < 32; c++) {
+        var p = c / 32;
+        if (chosen.indexOf(p) >= 0) continue;
+        var worst = 1e9;
+        for (t = 0; t < STEPS; t++) {
+          var f = t / STEPS, np = pt(p + f);
+          for (i = 0; i < chosen.length; i++) {
+            var op = pt(chosen[i] + f);
+            var d = (np.x - op.x) * (np.x - op.x) + (np.y - op.y) * (np.y - op.y);
+            if (d < worst) worst = d;
+          }
+        }
+        if (worst > bestMin) { bestMin = worst; best = p; }
+      }
+      chosen.push(best);
+    }
+    return chosen;
+  })();
   for (var k = 0; k < 6; k++) {
     var set   = el('kartset', 'transform:translateZ(6px)', zDrift);
-    var phase = k * (KART_DUR / 6);
+    var phase = PHASES[k] * KART_DUR;
     var tint  = ';--drift:' + (16 + k * 3) + 'deg;--accent:' + kartAcc[k] +
                 ';--helm:' + kartHelm[k];
     for (var t = 1; t >= 0; t--) {
