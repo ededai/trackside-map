@@ -450,10 +450,27 @@ svg.zglowsvg { position: absolute; left: 0; top: 0; overflow: visible;
        --os: 0; transition: --os .6s cubic-bezier(.4,0,.2,1); }
 body.xray #gB1      { --os: 1; }
 body.xray #gSurface { --os: .12; }
+/* v14 (client): "B1 is super messy". The cause was L1 TEXT, not L1 massing —
+   at --os .12 the surface slab reads as a ghost outline (which is what x-ray
+   is for) but every unit number, WC / MRT / DROP / i badge, lift pin, tenant
+   name and kiosk caption was still legible ON TOP of the basement plan. All
+   of it is now hard-zeroed the moment x-ray turns on, so the only text on
+   screen in x-ray belongs to B1. #gLiftL1 is a child of #gSurface, so the L1
+   lobby's own caption + pin are covered by the same rule; the B1 lobby (in
+   #gB1) keeps its pin, caption and ring, which is the level-switch
+   affordance. The ID gives these rules the specificity to beat both the
+   generic .lbl opacity calc and `body.z-near .lbl.det`. */
+body.xray #gSurface .lbl,
+body.xray #gSurface .mwdot,
+body.xray #gSurface .liftring { opacity: 0; }
 /* v13: .b1slab and .parkgrid are retired — the basement is the SAME 75
    footprint polygons (see .mwB1 / .mwB1grid), so nothing can spill outside
    the building line the way a full-width rectangle did. */
 .driftfloor { background: #d7dadd; border-radius: 3px; }
+/* v14: an explicit floor pad per B1 zone so each activation reads as a defined
+   AREA against the slab rather than as loose furniture scattered on it. */
+.b1pad { background: #d7dadd; border-radius: 4px;
+         box-shadow: inset 0 0 0 1.5px rgba(112,120,128,.34); }
 .mark { position: absolute; display: block; }
 .mcpark { background: repeating-linear-gradient(45deg,
             rgba(150,156,162,.34) 0 4px, transparent 4px 9px); border-radius: 2px; }
@@ -724,14 +741,18 @@ body.xray #gSurface { --os: .12; }
         <!-- Lift Lobby A on L1 lives outside gMall so zone dimming never
              mutes the level-link affordance. -->
         <div id="gLiftL1" style="position:absolute;inset:0;transform-style:preserve-3d"></div>
-        <!-- Monument Square. v13 RE-SEAT r2: centre (640,670) — the south
-             outdoor plaza by the dining arm (the real monument obelisk is
-             outdoors on this side). Container size untouched (370 x 230). -->
-        <div id="zSquare"   class="zone" style="left:455px;top:555px;width:370px;height:230px"></div>
-        <!-- South Galleria 4A + 4B. v13 RE-SEAT r2: centre (980,848) — the
-             band south of the Chick-fil-A row, flanking the South Entrance,
-             clear of the octagon forecourt. Rooms E-W internally, untouched. -->
-        <div id="zGalleria" class="zone" style="left:790px;top:758px;width:380px;height:180px"></div>
+        <!-- Monument Square. v14 RE-SEAT: centre (500,620) — the open plaza on
+             the Raffles Boulevard side, in the ground the deleted south-west
+             dining arm freed. Container size untouched (370 x 230). Nearest
+             remaining footprint is 26/28/K17 (594,380,664,454), 51px clear. -->
+        <div id="zSquare"   class="zone" style="left:315px;top:505px;width:370px;height:230px"></div>
+        <!-- South Galleria 4A + 4B. v14 RESTRUCTURE: centre (1290,665), and the
+             two rooms are now a NORTH-SOUTH stack (4B north, 4A south) instead
+             of an east-west pair. 220 x 320 — 4B y 0..152, party wall 152..168,
+             4A y 168..320. It stands in the forecourt Harvey Norman vacated, so
+             4B faces units 51/52/53 and 4A faces Chick-fil-A across the walkway
+             that carries the real drop-off and the South Entrance. -->
+        <div id="zGalleria" class="zone" style="left:1135px;top:495px;width:220px;height:320px"></div>
       </div>
       <!-- basement, revealed by x-ray -->
       <div id="gB1">
@@ -796,13 +817,30 @@ body.xray #gSurface { --os: .12; }
    plan by fit_to_plan.py (theta -53.04deg, scale 113.69), so these are plan
    pixels in the engine's own frame: x = east, y = south.
 
-     MW_UNITS  75 shops   [ short, cx, cy, "x,y x,y ..." ]
+     MW_UNITS  65 shops   [ short, cx, cy, "x,y x,y ..." ]
                           the 4th field is an SVG `points` string, used
                           verbatim — no per-frame parsing, no conversion
-     MW_ICONS  17 anchors [ kind, x, y, letter ]
+     MW_ICONS  15 anchors [ kind, x, y, letter ]
                           kind = lift | escalator | toilet | mrt | dropoff | info
      MW_LM     named landmark points, used to derive the corridor bands and
-               to seat the four tenant labels
+               to seat the three tenant labels
+
+   v14 (client): TWO DATA EDITS on top of the survey.
+     1  THE SOUTH-WEST DINING ARM IS GONE. The ten polygons from 23 down to
+        Paulaner (23, 20/21/22, 16/17/18/19, 14/15, 11/12/13, 09/10, 06/07/08,
+        03/04/05 and both halves of 01 to 02) are filtered OUT of the base
+        build on every variant and on both levels — 75 shops become 65. Lift
+        pin E (414.2,622.8), the WC badge (431.6,618.9) and the PAULANER
+        tenant label stood on that arm and go with it, as does the corridor
+        band that ran out to the arm tip. The space it frees is where
+        Monument Square now sits.
+     2  HARVEY NORMAN IS SCALED TO 0.55 about the fixed anchor (972,244) —
+        its own north-west corner, so its west face barely moves (972.6 ->
+        972.3) while its east and south faces pull in from (1279,587) to
+        (1141,433). Client note: "doesn't need full size, just the idea it's
+        there". Every vertex of both --a and --b polygons is p' = anchor +
+        0.55*(p - anchor); the centroids and MW_LM.harvey_c carry the same
+        map so the HARVEY NORMAN label stays on the shrunk mass.
    ========================================================================== */
 var MW_UNITS = [
 ["33",729.9,443.4,"714.5,444.6 725.5,430 746.4,440.7 733,458.5"],
@@ -810,10 +848,6 @@ var MW_UNITS = [
 ["30",668.8,420.8,"664.8,441 650.5,430.2 671.8,401.6 688,410.3"],
 ["29",650.5,409.1,"649.1,429.1 631.7,416 650.8,390.6 670.4,400.9"],
 ["26/28/K17",631,426.8,"663.8,442.3 654.6,454.5 631.4,437 627.9,441.6 617.6,433.9 611.1,442.6 593.9,429.6 631,380.2 649.3,389.7 629.3,416.4"],
-["23",594.5,459.5,"610.1,443.9 599.5,458 609.2,465.3 591.1,489.5 564.1,469.2 592.9,430.9"],
-["20/21/22",549.7,515.5,"563.1,470.5 590,490.8 553.1,539.9 543.9,533 552,522.3 541.7,514.6 530.7,529.2 523.2,523.5"],
-["16/17/18/19",501.2,556.1,"545.8,549.6 501.5,608.5 452.5,571.7 483.4,530.6 505.4,547.1 518.8,529.3"],
-["14/15",474.2,611.2,"451.5,573 500.5,609.9 492.1,621 488.2,618.1 483.8,623.9 476.1,618.1 469.5,626.9 432.1,598.8"],
 ["27",587.2,366.1,"618,369.2 592.7,402.8 558.7,377.2 566,366.4 571.4,361 578.1,357.1 585.5,355 593.3,354.9 600.8,356.8 607.4,360.5"],
 ["83",630.8,308.2,"633.6,277.7 667.5,303.3 642.3,336.8 631,329.2 625.6,323.8 621.7,317.2 619.6,309.7 619.6,301.9 621.5,294.4 625.2,287.8"],
 ["108",531.3,324,"528.5,354.5 494.6,329 519.9,295.3 531,303 536.4,308.4 540.3,315 542.4,322.5 542.5,330.3 540.6,337.8 536.9,344.4"],
@@ -864,12 +898,7 @@ var MW_UNITS = [
 ["44/45",911.4,614.9,"920.6,577.4 945.9,596.4 908.5,646.1 896.9,637.4 907.8,622.9 903.5,619.7 908.5,613.1 899.1,606"],
 ["46/47/48/49/50",978.8,617.7,"975.8,559.4 1008.9,576.6 988.5,603.6 1019.6,626.9 970.3,692.5 909.8,647.1"],
 ["65",995.9,490.8,"1000.4,522.2 976.2,509.7 993.2,487.1 982.2,478.9 995.5,461.1 1028,485.5"],
-["59 to 64/02-37 to 41/03-02--a",1137.9,400.3,"1002,522.9 1030.3,485.3 996.6,459.8 1023.1,424.4 1027.4,427.5 1038.8,412.2 1020.5,398.4 1018.6,394 976.7,416 972.6,408.2 1026.2,381.8 1089.5,349.9 1100.2,335.7 1129.6,356.9 1137.3,346.6 1146.7,353.5 1165.5,328.4 1142.3,310.9 1124.4,334.7 1109.6,323.6 1169.2,244.3 1278.6,326.7 1271,382.1 1279.1,388.1 1276,407.6 1257.9,403.6 1241.4,391.2 1230.1,406.1 1224.9,402.3 1221.4,407.3 1268.3,442.7 1263.8,467.1 1236.4,503.9 1205.2,480.6 1125.3,586.8"],
-["11/12/13",408.7,662.9,"406.3,659.6 424.5,635.5 446.3,651.9 407.7,703.1 373.4,677.3 393.7,650.2"],
-["09/10",375.1,710.7,"406.7,704.5 377.9,742.7 343.6,716.9 372.3,678.6"],
-["06/07/08",348.4,757.9,"342.5,718.2 376.9,744.1 364.2,760.9 354.2,753.4 340.7,771.4 348.9,777.5 346.2,781.1 313.7,756.6"],
-["03/04/05",309.3,807,"312.7,757.9 351.9,787.5 320.2,829.6 305.9,818.9 293,836.2 272,812"],
-["01 to 02/02-01--a",266.2,845.7,"291.9,837.5 261.5,878 240.6,853.8 271,813.4"],
+["59 to 64/02-37 to 41/03-02--a",1063.2,330,"988.5,397.4 1004.1,376.7 985.5,362.7 1000.1,343.2 1002.5,344.9 1008.7,336.5 998.7,328.9 997.6,326.5 974.6,338.6 972.3,334.3 1001.8,319.8 1036.6,302.2 1042.5,294.4 1058.7,306.1 1062.9,300.4 1068.1,304.2 1078.4,290.4 1065.7,280.8 1055.8,293.9 1047.7,287.8 1080.5,244.2 1140.6,289.5 1136.5,320 1140.9,323.3 1139.2,334 1129.2,331.8 1120.2,325 1114,333.2 1111.1,331.1 1109.2,333.8 1135,353.3 1132.5,366.7 1117.4,386.9 1100.3,374.1 1056.3,432.5"],
 ["77",752,380.9,"735.5,383.3 747.3,367.6 756.7,374.6 753.3,379.2 762.6,386.2 756.4,394.3"],
 ["K10",598.6,403,"599,407.6 594.1,403.8 598.1,398.4 603.1,402.2"],
 ["K9",603.6,396.3,"604.1,400.8 599.1,397.1 603.1,391.7 608.1,395.5"],
@@ -878,28 +907,29 @@ var MW_UNITS = [
 ["91A",464.6,244.3,"447.9,245.8 456.2,229.6 481.4,242.9 472.8,259"],
 ["54/55/56",1028,667.8,"1002.6,694.1 982.1,678.8 1007.8,645.5 1021.6,626.4 1045.6,595.1 1100.5,623.1 1072.5,770.5 991.6,708.8"],
 ["51/52/53",1016.5,600.2,"1020.6,625.7 990.9,603.3 1010.4,577.3 1044.1,594.4"],
-["01 to 02/02-01--b",257.8,850,"255.1,806.3 294.7,848.2 260.4,893.8 220.8,851.9"],
-["59 to 64/02-37 to 41/03-02--b",1161.5,413.9,"1037.7,539.9 1088.6,472.3 1027.8,426.5 1038.6,412 1020.2,399 1018,393.7 976.2,416 972.1,408.2 1088.9,350.1 1168.5,244.3 1226.3,287.7 1276.7,327.5 1271,381.9 1279.2,387.4 1276.1,407.8 1257.8,404.2 1241.5,392 1229.9,406.3 1224.9,402.5 1221.2,406.7 1268.6,442.4 1263.4,467.6 1235.5,504.1 1204.4,481.4 1125,587"]
+["59 to 64/02-37 to 41/03-02--b",1076.2,337.4,"1008.1,406.7 1036.1,369.6 1002.7,344.4 1008.6,336.4 998.5,329.3 997.3,326.3 974.3,338.6 972.1,334.3 1036.3,302.4 1080.1,244.2 1111.9,268 1139.6,289.9 1136.5,319.8 1141,322.9 1139.3,334.1 1129.2,332.1 1120.2,325.4 1113.8,333.3 1111.1,331.2 1109.1,333.5 1135.1,353.1 1132.3,367 1116.9,387.1 1099.8,374.6 1056.2,432.7"]
 ];
 
 /* icon anchors. ORDER MATTERS for the escalators: the three escalator rows
-   are read in array order and paired with ESC_DEG below. */
+   are read in array order and paired with ESC_DEG / ESC_LEN below.
+   v14: lift E (414.2,622.8) and the WC badge (431.6,618.9) are REMOVED — both
+   stood on the deleted south-west dining arm. 17 anchors become 15. */
 var MW_ICONS = [
 ["mrt",406.1,41.6,""],       ["lift",529.8,154.5,"C"],   ["lift",227.6,296.1,"D"],
-["lift",414.2,622.8,"E"],    ["lift",766.1,366.7,"B"],   ["lift",980.8,439.3,"A"],
+["lift",766.1,366.7,"B"],
 ["mrt",1307.6,438.2,""],     ["dropoff",1130.9,609.9,""],["toilet",702,465.3,""],
 ["toilet",386.2,294.7,""],   ["info",1010.1,551.9,""],   ["dropoff",315.3,166.3,""],
 ["escalator",490.2,258.8,""],["escalator",726.8,407.5,""],["escalator",987.7,540.2,""],
-["toilet",821.2,550.1,""],   ["toilet",431.6,618.9,""]
+["toilet",821.2,550.1,""]
 ];
 
 var MW_LM = {
   crossing:    [626.8, 400.3],   /* where the west arms meet the E-W spine   */
-  harvey_c:    [1137.9, 400.3],  /* Harvey Norman mass centre                */
-  harvey_west_x: 972.6,          /* its west face — the spine's east end     */
+  harvey_c:    [1063.2, 330],    /* Harvey mass centre, v14 shrunk 0.55      */
+  harvey_west_x: 972.3,          /* its west face — the spine's east end     */
   east_plaza:  [984.3, 490.8],
   cluster_c:   [324.6, 282.7],   /* north-west shop cluster                  */
-  arm_tip:     [266.2, 845.7],   /* south-west arm tip (Paulaner)            */
+  /* arm_tip (266.2,845.7) RETIRED in v14 with the south-west dining arm */
   chickfila_c: [1028, 667.8],
   u65_c:       [995.9, 490.8]
 };
@@ -935,36 +965,54 @@ var KEYFRAMES = [
     kick:'Site',
     title:'TRACKSIDE at Millenia Walk',
     bullets:['3 days, four activation zones across two levels',
-             'L1 indoor spine west to east, Monument Square outdoors on the south plaza',
+             'L1 indoor spine west to east, Monument Square outdoors on the Raffles Boulevard plaza',
              'B1 car park converted: drift karts, car display and lounge'],
-    /* focus (715,490) dz +45 — UNCHANGED. The real footprint's bounding box
-       is x 220.8..1279.2, y 76.2..893.8, centre (750,485), so the authored
-       overview focus still frames the whole site to within 35px. */
-    tx:   -5, ty:  17, scale: 0.62, rz: -38, rx: 58, xray:false, zone:null },
+    /* v14 REFRAME (delta method). The south-west dining arm is gone and Harvey
+       is at 0.55, so the 65 remaining footprints now span x 253.7..1141.0,
+       y 76.2..770.5 (was 220.8..1279.2 / 76.2..893.8). Adding the re-seated
+       activations back in — Monument Square 315..685 x 505..735, South
+       Galleria 1180..1400 x 505..825, the South Entrance forecourt and the
+       unit-27 merch pad — gives a content box of 253.7..1400 x 76.2..825,
+       centre (826.9,450.6).
+       focus (715,490) -> (826.9,450.6), dz +45 unchanged:
+         tx -5 -> -49 , ty 17 -> 55
+       SCALE: 0.62 -> 0.68. JUDGMENT CALL — the brief suggested 0.72-0.78 on
+       the assumption the whole site had tightened by a fifth. It has not: the
+       north-west cluster still sets the west edge at x 253.7 and the forecourt
+       Harvey vacated is now occupied by the South Galleria, so the ISO-
+       projected content is only ~1.5% smaller than v13's. A neutral reframe is
+       0.63; 0.68 is a deliberate ~8% tighter crop that reads bigger on desktop
+       while stopping short of cropping the north-west cluster on a 390px phone,
+       where the overview already carries ovZoom 1.45 on top of this number. */
+    tx:  -37, ty:  50, scale: 0.68, rz: -38, rx: 58, xray:false, zone:null },
 
   { id:'square', key:'2', accent:'#d9564a',
     name:'Monument Square',
     desc:'Scale RC experience · 1:14 · 1:10 · 1:7 try and buy',
-    kick:'Outdoor · South plaza',
+    kick:'Outdoor · Raffles Boulevard plaza',
     title:'Monument Square',
-    bullets:['Scale RC experience on an outdoor plaza ringed with planter trees',
+    bullets:['Scale RC experience on the open outdoor plaza off Raffles Boulevard',
              '1:14, 1:10 and 1:7 cars running on a purpose-built track pad',
              'Try-and-buy pen at the boulevard end — drive one before you own one'],
-    /* v13 RE-SEAT. focus (1210,555) dz +14 — the plaza's new centre.
-       was focus (1185,215) -> tx -289, ty 292 */
-    tx: -32, ty: -120, scale: 1.05, rz: -30, rx: 54, xray:false, zone:'zSquare' },
+    /* v14 RE-SEAT (delta method). The plaza drops into the ground the deleted
+       dining arm freed, fronting Raffles Boulevard.
+       focus (640,670) -> (500,620), dz +14, scale / rz / rx unchanged:
+         tx -32 -> 122 , ty -120 -> -136 */
+    tx: 122, ty: -136, scale: 1.05, rz: -30, rx: 54, xray:false, zone:'zSquare' },
 
   { id:'galleria', key:'3', accent:'#3f7fd6',
     name:'South Galleria 4A + 4B',
     desc:'MiniMe FPV racing · Diecast showcase',
-    kick:'South Entrance forecourt',
+    kick:'In front of Harvey Norman',
     title:'South Galleria 4A + 4B',
     bullets:['4A — six MiniMe FPV rigs with seated drivers ringing a winding mountain-pass circuit',
              '4B — Diecast shop: stocked shelves, cashier, browsing tables and the RC holder wall',
-             'Both rooms flank the South Entrance forecourt, beside the taxi stand and drop-off'],
-    /* v13 RE-SEAT. focus (1190,675) dz +34 — centre of the two rooms.
-       was focus (380,521) -> tx 308, ty -88 */
-    tx: -497, ty: -66, scale: 1.18, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
+             '4B fronts units 51/52/53, 4A fronts Chick-fil-A, across the walkway from Harvey Norman'],
+    /* v14 RE-SEAT (delta method). The pair turns from an E-W row into a N-S
+       stack — 4B north, 4A south — standing in the forecourt Harvey vacated.
+       focus (980,848) -> (1290,665), dz +34, scale / rz / rx unchanged:
+         tx -497 -> -693 , ty -66 -> 111 */
+    tx: -642, ty: 103, scale: 1.18, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
 
   { id:'drift', key:'4', accent:'#efa227',
     name:'B1 — Dorifto Drift Karts',
@@ -1106,31 +1154,44 @@ function prop(name) {
    LEVEL 1 (1440 x 940 plan, x = east, y = south):
 
      BASE, from data (3.0):
-       x  221 - 1279   75 real shop polygons, extruded 26px. Silhouette at
-       y   76 -  894   z 0.5, wall stack z 3..24, tops z 26
+       x  254 - 1141   65 real shop polygons, extruded 26px. Silhouette at
+       y   76 -  771   z 0.5, wall stack z 3..24, tops z 26.  v14: the ten
+                       south-west dining-arm polygons are deleted and Harvey
+                       Norman is at 0.55, so both the west and the east extents
+                       pull in (was x 221-1279, y 76-894, 75 polygons)
        corridors       the negative space between the arms: the E-W spine at
                        y 400-460 from the crossing (627,400) east to the
-                       Harvey Norman face (972.6), plus bands out to the SW
-                       arm tip, the NW cluster, the east plaza and the SE arm
-       anchors         lifts A-E, 3 escalator runs, 4 WC, 2 MRT, 2 drop-off,
-                       1 info — all 17 land on corridor floor, never on a shop
+                       Harvey Norman face, plus bands out to the NW cluster,
+                       the east plaza and the SE arm. v14: the band to the SW
+                       arm tip is deleted with the arm
+       anchors         lifts A-D, 3 escalator runs, 3 WC, 2 MRT, 2 drop-off,
+                       1 info — all 15 land on corridor floor, never on a shop
 
-     RE-SEATED ACTIVATIONS (containers moved, internals untouched):
-       (1075,545)      OFFICIAL F1 MERCHANDISE — the octagonal pad, its four
-                       columns, the roof plate, the pyramid and the stall
-       (1210,555)      MONUMENT SQUARE — scale RC ring
-       (1190,675)      SOUTH GALLERIA 4A + 4B, rooms E-W
-       (1292,672)      reception, facing the forecourt
-       (1170,738)      SOUTH ENTRANCE, sliding gap facing SOUTH
-       (855,447) (890,452)   SG 1 / SG 2 kiosks, on the spine axis
-       (962,441)       LIFT LOBBY A, beside the real Lift A (980.8,439.3)
+     RE-SEATED ACTIVATIONS (v14):
+       (588,374)       OFFICIAL F1 MERCHANDISE — pad + stall on unit 27, at
+                       0.60 on a deck lifted to the unit top. The octagon,
+                       its columns, its roof plate and the pyramid are GONE
+       (500,620)       MONUMENT SQUARE — scale RC ring, on the Raffles
+                       Boulevard plaza the deleted dining arm freed
+       (1290,665)      SOUTH GALLERIA 4A + 4B, rooms stacked NORTH-SOUTH
+                       (4B north, 4A south) in Harvey's old forecourt
+       (1020,564)      reception, directly below the east escalator run
+       (1142,616)      SOUTH ENTRANCE, sliding gap facing SOUTH, canopy over
+                       the real drop-off badge at (1130.9,609.9)
+       (738,403) (748,435)   SG 1 / SG 2 kiosks, on the spine axis
+       (962,441)       LIFT LOBBY A, beside the real Lift A (980.8,439.3),
+                       v14 at 55% plan (36 x 34)
        (800,430)       the MILLENIA WALK name
        west strip      F1 STREET CIRCUIT — UNCHANGED, x 8-58, y 40-900
 
    BASEMENT 1 (translateZ -95):
        (1120,500)      DORIFTO ZONE     (750,460)  CAR DISPLAY & LOUNGE
-     mass            the SAME 75 polygons in a dark fill, park grid clipped
-                     to them, pillars pruned to the ones under the building
+     mass            the SAME 65 polygons in a dark fill, the bay grid faded
+                     to a whisper and clipped to them, pillars cut to a five-
+                     post regular lattice with none inside a zone
+     clarity         v14: x-ray now hard-zeroes every L1 label, badge, pin and
+                     lift ring, so no surface text ghosts over the basement,
+                     and each zone gets an explicit floor pad
      activations     DORIFTO ZONE  = an L: horizontal arm along its own TOP
                                      edge (motorcycle park corner) + vertical
                                      arm down its WEST edge. Inside it, a
@@ -1154,7 +1215,7 @@ var zGalleria = document.getElementById('zGalleria');
 var zDrift    = document.getElementById('zDrift');
 var zDisplay  = document.getElementById('zDisplay');
 
-var MALL_H  = 110;
+/* MALL_H (110) retired in v14 with the octagonal Great Hall it raised. */
 /* LIFT LOBBY A — shared plan footprint, used on BOTH levels so the link shaft
    stays perfectly vertical.
    v4 move: the B1 lobby sat hard against the Car Display zone glow, so it is
@@ -1163,8 +1224,17 @@ var MALL_H  = 110;
    value so the L1 lobby can move with it and the shaft does NOT have to angle.
    v4 resize: block down to ~80% (80x76x46 -> 64x61x37).
    v13 RE-SEAT: recentred on (962,441), immediately beside the REAL Lift A at
-   (980.8,439.3) in the icon data. The B1 lobby and the link shaft follow it. */
-var LOBBY   = { x: 930, y: 410.5, w: 64, h: 61, z: 37 };  /* centre = 962, 441 */
+   (980.8,439.3) in the icon data. The B1 lobby and the link shaft follow it.
+   v14 RESIZE (client: "oversized, scale it to the map"): the plan footprint
+   drops to ~55% — 64 x 61 -> 36 x 34, a believable lift core rather than a
+   shop-sized block — with the CENTRE PINNED at (962,441) so the B1 twin and
+   the link shaft do not have to move. JUDGMENT CALL: the extrusion is cut to
+   30 (B1: 26) rather than the full 55% (20). At 20 the core would stand
+   SHORTER than the 26px shop massing all round it and stop reading as a
+   vertical element at all; 30 keeps it just proud of the shops, which is what
+   makes it findable. The ring, the pins and the level-switch behaviour are
+   untouched apart from the ring's padding, which scales with the block. */
+var LOBBY   = { x: 944, y: 424, w: 36, h: 34, z: 30 };    /* centre = 962, 441 */
 
 /* ==========================================================================
    3.0  THE REAL FOOTPRINT  —  base geometry, data driven
@@ -1177,19 +1247,22 @@ var LOBBY   = { x: 930, y: 410.5, w: 64, h: 61, z: 37 };  /* centre = 962, 441 *
 var UNIT_H = 26;      /* extrusion height of the shop massing                */
 var WALL_N = 8;       /* layers in the extrusion stack (see the CSS comment) */
 /* every footprint layer shares one tight raster box, so no layer pays for the
-   940px of empty plan the building never touches */
-var FBX = { x: 200, y: 56, w: 1100, h: 860 };
+   940px of empty plan the building never touches.
+   v14: retightened onto the 65 remaining polygons (x 253.7..1141, y 76.2..770.5
+   after the arm deletion and the Harvey shrink) with a 20px margin. */
+var FBX = { x: 234, y: 56, w: 926, h: 736 };
 
 /* the units that BORDER an event zone — variant C outlines and numbers only
    these. The 59-to-64 mass is two polygons in the source data, so both are
-   listed; the duplicate micro-label is suppressed below. */
+   listed; the duplicate micro-label is suppressed below.
+   v14: '23' dropped with the rest of the deleted dining arm. */
 var ZONE_EDGE = [
   '65', '66', '69', '70',
   '59 to 64/02-37 to 41/03-02--a', '59 to 64/02-37 to 41/03-02--b',
   '44/45', '46/47/48/49/50', '51/52/53', '54/55/56',
   'K15/1', 'K15/2', 'K5',
   '34', '35', '36/37', '38/39', '40',
-  '23', '26/28/K17', '27', '29', '30', '31/32', '33'
+  '26/28/K17', '27', '29', '30', '31/32', '33'
 ];
 /* variant A also numbers three kiosks that variant C leaves alone */
 var KIOSK_A = ['K5', 'K7', 'K15/1', 'K15/2'];
@@ -1257,7 +1330,10 @@ stampUnits(mwSVG(gGround, 0.5, 'mwGround'));
       (b[0] - nx) + ',' + (b[1] - ny) + ' ' + (a[0] - nx) + ',' + (a[1] - ny) }, c);
   }
   var X = MW_LM.crossing;
-  band(X, MW_LM.arm_tip, 70);                      /* SW arm, down to the tip */
+  /* v14: the band that ran from the crossing out to the Paulaner arm tip is
+     DELETED with the arm. With no shops left to bury it, a 70px strip 580px
+     long would have painted as a grey road to nowhere straight across the
+     ground Monument Square now occupies. */
   band(X, MW_LM.cluster_c, 62);                    /* NW link into the cluster*/
   band(MW_LM.cluster_c, [470, 150], 58);           /* cluster spur, north     */
   band([985, 430], MW_LM.east_plaza, 66);          /* spine into the east plaza*/
@@ -1290,9 +1366,11 @@ stampUnits(mwSVG(gGround, 0.5, 'mwGround'));
   });
 })();
 
-/* ---- 3.0e the four landmark tenants — the anchors that orient a visitor -- */
+/* ---- 3.0e the landmark tenants — the anchors that orient a visitor -------
+   v14: PAULANER is gone with the south-west dining arm it named. HARVEY NORMAN
+   rides MW_LM.harvey_c, which carries the 0.55 shrink, so the label stays
+   centred on the reduced mass. */
 label(gMall, MW_LM.harvey_c[0],    MW_LM.harvey_c[1],    UNIT_H + 14, 'HARVEY NORMAN', 'tenant');
-label(gMall, MW_LM.arm_tip[0],     MW_LM.arm_tip[1],     UNIT_H + 14, 'PAULANER',      'tenant');
 label(gMall, 401.5,                212,                  UNIT_H + 14, 'STARBUCKS',     'tenant');
 label(gMall, MW_LM.chickfila_c[0], MW_LM.chickfila_c[1], UNIT_H + 14, 'CHICK-FIL-A',   'tenant');
 
@@ -1301,6 +1379,11 @@ label(gMall, MW_LM.chickfila_c[0], MW_LM.chickfila_c[1], UNIT_H + 14, 'CHICK-FIL
    the three real escalator runs as the engine's escalator pair turned along
    its corridor, and every other anchor as a small grey badge disc under an
    8px glyph. Deliberately quiet: this layer is wayfinding, not an activation. */
+/* v14 (client): the 'Escalators' TEXT LABEL is REMOVED from all three runs.
+   Three identical captions at 108px pitch overlapped the unit numbers, the
+   Millenia Walk name and each other at every zoom the map is actually read at,
+   and the twin-strip prop already says "escalator" on its own. The PROPS stay
+   at all three surveyed anchors. */
 function escalatorPair(parent, cx, cy, deg, len) {
   var W = len || 108, D = 12, GAP = 8;
   var g = grp(parent, cx, cy, W, D * 2 + GAP, deg || 0);
@@ -1308,15 +1391,21 @@ function escalatorPair(parent, cx, cy, deg, len) {
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
   rect(g, '', 0, D + GAP, W, D,
        'background:#d6dade;border-radius:2px;transform:translateZ(5px);--ol:.7');
-  label(g, W / 2, -10, 8, 'Escalators', 'sm det');
   return g;
 }
 (function () {
   /* corridor bearing at each escalator anchor, in MW_ICONS order:
        (490.2,258.8) on the cluster -> crossing run  ~21deg
        (726.8,407.5) on the E-W spine                 0deg
-       (987.7,540.2) on the east-plaza -> SE arm     ~76deg                  */
-  var ESC_DEG = [21, 0, 76], ei = 0;
+       (987.7,540.2) EAST RUN — v14 (client): the prop must sit EXACTLY on its
+                     anchor, and the client accepted an E-W alignment. The old
+                     76deg bearing followed the east-plaza -> SE-arm corridor
+                     but stood a 108px run across a floor gap only 37px deep
+                     (unit 65 ends y 522.2, unit 46/47/48/49/50 starts y 559.4),
+                     so both ends climbed onto shop massing. Turned to 0deg and
+                     shortened to 84 it lands entirely on floor: x 945.7..1029.7,
+                     y 524.2..556.2, ~2px clear of 65 and ~3px clear of 46-50. */
+  var ESC_DEG = [21, 0, 0], ESC_LEN = [108, 108, 84], ei = 0;
   var GLYPH = { toilet: 'WC', mrt: 'MRT', dropoff: 'DROP', info: 'i' };
   MW_ICONS.forEach(function (ic) {
     var kind = ic[0], x = ic[1], y = ic[2];
@@ -1324,7 +1413,7 @@ function escalatorPair(parent, cx, cy, deg, len) {
       var p = label(gMall, x, y, UNIT_H + 26, '', 'pin lift');
       p.firstChild.setAttribute('data-l', ic[3]);
     } else if (kind === 'escalator') {
-      escalatorPair(gMall, x, y, ESC_DEG[ei++], 108);
+      escalatorPair(gMall, x, y, ESC_DEG[ei], ESC_LEN[ei]); ei++;
     } else {
       el('flat mwdot', 'left:' + (x - 5) + 'px;top:' + (y - 5) +
          'px;width:10px;height:10px;transform:translateZ(4px)', gMall);
@@ -1334,7 +1423,14 @@ function escalatorPair(parent, cx, cy, deg, len) {
 })();
 
 /* ---- 3.2 Monument Square (zone) -----------------------------------------
-   Outdoor plaza, OUTSIDE the building line, north-east of the Great Hall.
+   Outdoor plaza, OUTSIDE the building line.
+   v14 RE-SEAT (client: "it is beside there"): centre (500,620), the ground the
+   deleted south-west dining arm freed, fronting Raffles Boulevard — which is
+   where the real monument plaza is. Container 370 x 230 -> x 315..685,
+   y 505..735. Nothing remains within 50px: the nearest surviving footprint is
+   26/28/K17 (593.9,380.2,663.8,454.5), 50.5px north of the container's top
+   edge, and unit 109 stops at y 369.9. The F1 street circuit (x 8..58) and the
+   'Raffles Boulevard' caption at (33,470) are 257px west.
    Local x 0 = west (RC track), x 370 = east (try-and-buy pen).              */
 zSquare.style.setProperty('--accent', '#d9564a');
 rect(zSquare, 'sqslab', 0, 0, 370, 230);
@@ -1404,25 +1500,39 @@ label(gMall, 800, 430, UNIT_H + 18, 'Millenia Walk');
 /* ---- 3.4 South Entrance + taxi stand / pick-up --------------------------
    v7: the entrance is a SLIM SLIDING DOOR (two glass panels with an open gap
    under a thin canopy).
-   v13 RE-SEAT: the whole assembly rotates 90deg and moves to the mall's real
-   SOUTH-EAST forecourt. The leaf now runs EAST-WEST with its SOUTH EDGE on
-   y 738, centred on x 1170, so the open gap (x 1160-1180) faces SOUTH.
-   Every part keeps its v9 proportions — the 20 x 152 canopy simply becomes
-   152 x 20, and the two 8 x 60 panels become 60 x 8.
-   JUDGMENT CALL: the taxi shelter and its label travel with the entrance.
-   The brief re-seats only the doors + canopy, but a pick-up point 1000px
-   from its own door reads as a mistake, so it follows onto the forecourt.  */
-(function () {
-  /* sliding door: two slim glass panels, gap between = door standing open */
-  shadow(gMall, 1100, 724, 140, 12);
-  box(gMall, 1100, 724, 60, 8, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
-  box(gMall, 1180, 724, 60, 8, 32, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
-  box(gMall, 1094, 718, 152, 20, 3, 'transform:translateZ(33px);--faceT:#c5cbd0'); /* canopy */
-  label(gMall, 1170, 756, 42, 'South Entrance', 'sm');
-  rect(gGround, 'walk', 1124, 740, 92, 50, 'transform:translateZ(3px)');
+   v14 RE-SEAT (client: "where reception is now should be the south entrance"):
+   the assembly moves off the old (1094,718) forecourt and onto the strip the
+   reception counter has just vacated, immediately beside the REAL drop-off
+   badge at (1130.9,609.9). Doors still face SOUTH, i.e. outward.
 
-  box(gMall, 1210, 764, 60, 22, 16);                      /* taxi shelter       */
-  label(gMall, 1240, 796, 6, 'Taxi stand · pick-up point', 'sm det');
+   JUDGMENT CALL — POSITION. The brief asks for centre (1155,618) AND for the
+   South Galleria stack centred near (1150,650). Those two cannot both stand
+   there. The galleria is a 220 x 320 activation that has to clear Chick-fil-A
+   (54/55/56 reaches x 1100.5), which forces its west edge to x 1180; the
+   entrance is the small assembly, so it is the one that gives ground. It is
+   held at (1142,616) — 13px west of the brief's number — which keeps it in
+   the forecourt walkway BETWEEN Chick-fil-A and the galleria, with the real
+   drop-off badge sitting under its own canopy exactly the way a porte-cochere
+   works. That walkway is the one the galleria card now calls out.
+
+   JUDGMENT CALL — SIZE. The canopy comes down 152 -> 64 and the door leaves
+   60 -> 22. The pocket between the Chick-fil-A corner (x 1100.5) and the
+   galleria (x 1180) is 79.5px wide; the v13 canopy would have overlapped both.
+   At 64 it clears the shop by 9.5px and the galleria by 6px.
+   The taxi shelter and its label travel with the entrance, as before.       */
+(function () {
+  /* sliding door: two slim glass panels, gap between = door standing open.
+     Canopy x 1110..1174, leaves at x 1110 and x 1152, open gap x 1132..1152 —
+     centred on the drop-off badge at x 1130.9.                              */
+  shadow(gMall, 1114, 611, 56, 10);
+  box(gMall, 1110, 612, 22, 7, 30, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 1152, 612, 22, 7, 30, '--faceT:#cfe0ef;--faceA:#b7cde2;--faceB:#c3d6e8');
+  box(gMall, 1110, 607, 64, 18, 3, 'transform:translateZ(31px);--faceT:#c5cbd0'); /* canopy */
+  label(gMall, 1142, 636, 40, 'South Entrance', 'sm');
+  rect(gGround, 'walk', 1108, 628, 68, 38, 'transform:translateZ(3px)');
+
+  box(gMall, 1110, 674, 56, 18, 16);                      /* taxi shelter       */
+  label(gMall, 1138, 700, 6, 'Taxi stand · pick-up point', 'sm det');
 })();
 
 /* ---- 3.4b F1 STREET CIRCUIT — the west-edge straight ---------------------
@@ -1476,25 +1586,71 @@ label(gMall, 800, 430, UNIT_H + 18, 'Millenia Walk');
    their surveyed polygons instead, so there is nothing to fake here.       */
 
 /* ---- 3.6 South Galleria 4A + 4B (zone) ----------------------------------
-   Two adjacent rooms sitting ON the spine near the west end.
-   Local x 0-180 = 4A (MiniMe FPV racing). Local x 196-380 = 4B (diecast).    */
+   v14 RESTRUCTURE (client: "in front of Harvey Norman — 4A in front of
+   Chick-fil-A, 4B in front of 51/52/53").
+   The pair was an EAST-WEST row 380 x 180 with 4A west and 4B east. It is now
+   a NORTH-SOUTH STACK 220 x 320 standing in the forecourt Harvey Norman
+   vacated when it was scaled to 0.55:
+
+     container   world x 1180..1400, y 505..825   (centre 1290,665)
+     4B          local y   0..152    NORTH half — faces 51/52/53 (991,577,
+                                     1044,626) across the forecourt walkway
+     party wall  local y 152..168
+     4A          local y 168..320    SOUTH half — faces Chick-fil-A / 54/55/56
+                                     (982,595,1100,770)
+
+   CLEARANCES: the west edge at x 1180 is 79.5px clear of Chick-fil-A's east
+   corner (1100.5), 136px clear of 51/52/53 (1044.1), and the whole container
+   is 72px south of the shrunk Harvey mass (which now stops at y 432.7).
+   Units 65 (976..1028) and 66 (948..975) are 150px+ west. The South Entrance
+   and the real drop-off badge stand in the walkway between the stack and the
+   shop line, which is exactly what the card copy now describes.
+
+   HOW THE ROOMS ARE FITTED. Both interiors were authored against the old
+   room boxes (4A ~183 x 180 in container-local coords, 4B ~162 x 152 seated
+   at x 198..360). Rather than re-deriving ~120 hand-placed props, two rotated
+   SCALED SUB-PLANS carry each interior into its new half intact: r4A and r4B
+   below are preserve-3d layers with `transform-origin:0 0; translate(...)
+   scale(k)`, so every prop, the touge path, the RC motion paths and the shelf
+   grid keep their exact relative geometry. scale() is 2D, so extrusion
+   heights are NOT squashed — furniture keeps its readable height on a smaller
+   plan, which is what this map wants. k = 0.80 for 4A and 0.84 for 4B, both
+   inside the 0.75-0.85 the brief allowed.                                   */
 zGalleria.style.setProperty('--accent', '#3f7fd6');
-rect(zGalleria, '', 0, 0, 380, 180,
+rect(zGalleria, '', 0, 0, 220, 320,
      'background:#cfe2f0;border-radius:3px;transform:translateZ(5px)');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zGalleria);
-/* the two rooms read as a pair: a light party wall between 4A and 4B */
-box(zGalleria, 183, 4, 10, 172, 28);
-/* low north / south walls; v6: dropped 26 -> 11 so the south rig row's seated
-   figures are never hidden behind the wall from the default camera angle */
-box(zGalleria, 0,   0, 380, 6, 11);
-box(zGalleria, 0, 174, 380, 6, 11);
-label(zGalleria, 190, -28, 44, 'South Galleria 4A + 4B');
-label(zGalleria,  90, 196,  8, '4A · MiniMe FPV', 'sm det');   /* clear of the south rig row */
-label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
+/* the two rooms read as a pair: a light party wall between 4B (N) and 4A (S) */
+box(zGalleria, 4, 153, 212, 10, 28);
+/* low west / east walls; kept at 11 for the same reason the old north / south
+   pair was dropped 26 -> 11 — a taller wall hides 4A's seated figures from
+   the default camera angle */
+box(zGalleria,   0, 0, 6, 320, 11);
+box(zGalleria, 214, 0, 6, 320, 11);
+label(zGalleria, 110, -30, 44, 'South Galleria 4A + 4B');
+label(zGalleria, 110, 340,  8, '4A · MiniMe FPV', 'sm det');   /* below the south room */
+label(zGalleria, 110, 143,  8, '4B · Diecast', 'sm det');      /* on the party wall    */
+
+/* 4B occupies local y 0..152, 4A local y 168..320. The old interiors were
+   authored in a 380 x 180 frame, so each sub-plan is translated to its half
+   and scaled down about its own top-left. */
+/* 4B's interior was authored at x 198..360, y 12..164 -> scaled 0.84 that is
+   136.1 x 127.7, centred in the 220 x 152 room by translate(-124, 2).
+   4A's interior was authored at x 2..180, y 6..174 -> scaled 0.80 that is
+   142.4 x 134.4, centred by translate(37, 4). Both clear the 6px side walls. */
+var r4B = el('', 'position:absolute;left:0;top:0;width:220px;height:152px;' +
+                 'transform-style:preserve-3d;transform-origin:0 0;' +
+                 'transform:translate(-124px,2px) scale(.84)', zGalleria);
+var r4A = el('', 'position:absolute;left:0;top:168px;width:220px;height:152px;' +
+                 'transform-style:preserve-3d;transform-origin:0 0;' +
+                 'transform:translate(37px,4px) scale(.80)', zGalleria);
 
 /* 4A — SIX MiniMe FPV rigs with seated drivers, 3 along each side, ringing a
-   winding mountain-pass (touge) circuit. Six RC cars, one colour each.       */
-(function () {
+   winding mountain-pass (touge) circuit. Six RC cars, one colour each.
+   v14: the builder is handed r4A as its host instead of the zone container, so
+   every coordinate below is UNCHANGED and the whole tableau simply rides the
+   sub-plan's translate + scale into the stack's south room.                  */
+(function (zGalleria) {
   /* --- six sim-rig tableaux: low platform, glowing screen on the track edge,
      bucket seat, and a BLOCKY SEATED FIGURE (legs, shirt torso, two arms to a
      wheel, head) built from stacked leaves so the person reads in 3D.
@@ -1577,7 +1733,7 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
     el('rc', '--path:path("' + d + '");--dur:7s;--accent:' + cols[k] + ';--dly:' +
              (-k * 1.167).toFixed(2) + 's;transform:translateZ(9px)', zGalleria);
   }
-})();
+})(r4A);
 
 /* 4B — DIECAST SHOP  (v9, built from the client's shop plan, which belongs in
    this room and not in 4A)
@@ -1595,8 +1751,12 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
    Every unit keeps the stocked-tier construction: the visible SIDE faces
    carry three tiers of tiny multicoloured diecast boxes painted as repeating
-   gradients, and a few colour dots of boxed stock sit on the top.           */
-(function () {
+   gradients, and a few colour dots of boxed stock sit on the top.
+   v14: as with 4A, the builder is handed r4B as its host and every coordinate
+   below is untouched — the sub-plan carries the shop into the stack's north
+   room, so the full content set (shelves, cashier, tables, RC holder) is
+   intact rather than re-authored.                                           */
+(function (zGalleria) {
   var SH = 26;
   var PAL = ['#c8443a', '#2f6fc4', '#e0a72a', '#3f9d6d', '#8a6bc4', '#d9564a',
              '#34a06a', '#efa227', '#3f7fd6', '#b5563f', '#5b6068', '#c98a2e',
@@ -1681,13 +1841,16 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
                           'px;transform:translateZ(6px)', zGalleria);
     el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
   }
-})();
+})(r4B);
 
-/* galleria crowd dots */
+/* galleria crowd dots — v14: re-spread over the 220 x 320 stack, skipping the
+   party wall band (y 150..170) so nobody stands inside it */
 (function () {
   var rnd = rnder(31);
   for (var i = 0; i < 14; i++) {
-    var w = el('dotwrap', 'left:' + (16 + rnd() * 348) + 'px;top:' + (14 + rnd() * 152) +
+    var y = 14 + rnd() * 292;
+    if (y > 146 && y < 174) y += 32;
+    var w = el('dotwrap', 'left:' + (14 + rnd() * 192) + 'px;top:' + y +
                           'px;transform:translateZ(5px)', zGalleria);
     el('dot', '--dur:' + (8 + rnd() * 5).toFixed(1) + 's;--dly:' + (-rnd() * 9).toFixed(1) + 's', w);
   }
@@ -1698,10 +1861,18 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
    runs are built in 3.0f from the icon data, each turned along its own
    corridor.                                                                */
 (function () {
-  /* reception counter, v13 RE-SEAT r2 to (1160,622): forecourt north strip
-     beside the real drop-off badge, clear of the relocated octagon */
-  box(gMall, 1140, 616, 40, 12, 14, '--faceT:#ded6c8;--faceA:#c9c0b0;--faceB:#d4cbbc');
-  label(gMall, 1160, 640, 6, 'Reception', 'sm det');
+  /* reception counter, v14 RE-SEAT (client: "reception should be below the
+     escalator"): it moves off the forecourt — the South Entrance takes that
+     spot — and down onto the east-plaza floor immediately SOUTH of the east
+     escalator run, which after v14 lies E-W across x 945.7..1029.7,
+     y 524.2..556.2.
+     JUDGMENT CALL: the brief says ~(988,568). At that exact point the 40px
+     counter would stand on unit 46/47/48/49/50, whose north-west edge runs
+     (975.8,559.4) -> (1008.9,576.6) and is already inside the polygon by
+     y 568. Slid 32px east to (1020,564) — still directly below the escalator's
+     east half, still on open floor — the counter clears that edge by ~7px. */
+  box(gMall, 1002, 558.5, 36, 11, 14, '--faceT:#ded6c8;--faceA:#c9c0b0;--faceB:#d4cbbc');
+  label(gMall, 1020, 582, 6, 'Reception', 'sm det');
 
   /* the two kiosks sit ON the E-W spine corridor, v13 RE-SEAT to (855,447)
      and (890,452).
@@ -1712,59 +1883,58 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
      the data gives two kiosk seats, not four.                              */
   /* r2: shifted into the clear corridor gap between unit 33 and the K15
      kiosk pair, stacked on the corridor axis (SG2 clipped unit 70 before) */
-  box(gMall, 738, 403, 34, 24, 16, '--ol:.62');
-  label(gMall, 755, 397, 22, 'SG 1', 'sm det');
-  box(gMall, 748, 435, 34, 24, 16, '--ol:.62');
-  label(gMall, 765, 429, 22, 'SG 2', 'sm det');
+  /* r4: 24x16 pads stacked in the 33-to-K15 corridor gap; SG2 ends y445,
+     1px clear of unit 34 (top edge 446) */
+  box(gMall, 748, 405, 24, 16, 16, '--ol:.62');
+  label(gMall, 760, 399, 22, 'SG 1', 'sm det');
+  box(gMall, 748, 429, 24, 16, 16, '--ol:.62');
+  label(gMall, 760, 453, 22, 'SG 2', 'sm det');
 })();
 
-/* ---- 3.8 (v4) OFFICIAL F1 MERCHANDISE moved INSIDE the Great Hall --------
-   The merchandise is not a separate booth on the spine — it IS what the
-   octagon is used for. The stall and its anchor label are built in 3.9, on
-   the octagon footprint. This slot is intentionally empty; the spine here is
-   now just faded retail like the rest of the run.                           */
+/* ---- 3.8 / 3.9 OFFICIAL F1 MERCHANDISE — on unit 27 ---------------------
+   v14 (client: "F1 official merch is in the area of unit 27").
+   THE OCTAGON IS DELETED IN FULL — the 170px clipped pad, its four MALL_H
+   columns, the cut-away roof plate and the four-armed pyramid. It was an
+   invented hall standing on ground the survey shows as open forecourt, and
+   with the merchandise moving into a real tenancy it had nothing left to do.
+   The .oct and .pyr rules stay in the stylesheet unused rather than being
+   pulled out from under anything else that might want them later.
 
-/* ---- 3.9 THE GREAT HALL — octagonal pad + pyramid ------------------------ */
+   What replaces it is a POP-UP IN A VACANT UNIT: unit 27 (bbox 558.7,354.9 ..
+   618,402.8, centre 588,379) keeps its base block from 3.0 and the merch pad
+   plus the merchStall prop sit ON TOP of it, at z 26.5 — the unit top — so the
+   stall reads as something dropped into a shop rather than as a second
+   building. The 'Official F1 Merchandise' anchor label rides above it as
+   before.                                                                    */
 (function () {
-  /* v13 RE-SEAT: the hall is now defined by its CENTRE, not its corner, so
-     the octagon, its four columns, the roof plate, the pyramid and the merch
-     stall all follow one number pair. Centre (1255,725) r2 — the real south
-     forecourt pocket (Harvey south face 587 / Chick-fil-A row east 1100 /
-     drop-off 1131,610 all clear); S shrunk 216->170 to fit the pocket. */
-  var OCX = 1255, OCY = 725, S = 170;
-  var OX = OCX - S / 2, OY = OCY - S / 2, cx = OCX, cy = OCY;
-  rect(gMall, 'oct', OX, OY, S, S, 'background:#e2e5e8;transform:translateZ(5px)');
-  /* 4 slender columns on the octagon's flat-side midpoints hold the roof */
-  box(gMall, cx - 8,  OY + 4,      16, 16, MALL_H);
-  box(gMall, cx - 8,  OY + S - 20, 16, 16, MALL_H);
-  box(gMall, OX + 4,  cy - 8,      16, 16, MALL_H);
-  box(gMall, OX + S - 20, cy - 8,  16, 16, MALL_H);
-  /* roof plate, cut away so the hall reads as an open volume */
-  rect(gMall, 'oct', OX + 8, OY + 8, S - 16, S - 16,
-       'background:rgba(196,201,206,.5);transform:translateZ(' + MALL_H + 'px)');
+  var cx = 588, cy = 374;                    /* the unit's usable centre       */
+  /* Unit 27 is a small fan-shaped tenancy: bbox 59 x 48, but the largest
+     rectangle that fits fully INSIDE the polygon is only about 32 x 26. The
+     merchStall prop is a fixed 60 x 30 in props.js, so the pad and the stall
+     ride ONE SCALED DECK (k .60 about the unit centre) rather than being
+     re-authored at odd sizes: 99% of the pad and 100% of the stall then land
+     on unit 27's own floor. The deck also lifts the pair to the unit top
+     (UNIT_H 26, +0.5 to clear the top face) so it reads as a pop-up dropped
+     into a vacant shop, not as a second building on the plaza. scale() is 2D,
+     so the counter and back wall keep their full height. */
+  var K = 0.60;
+  var deck = el('', 'position:absolute;left:0;top:0;width:100%;height:100%;' +
+                    'transform-style:preserve-3d;transform-origin:' + cx + 'px ' + cy + 'px;' +
+                    'transform:translateZ(' + (UNIT_H + 0.5) + 'px) scale(' + K + ')', gMall);
+  /* small branded pad, authored at 64 x 40 -> 38.4 x 24 on the deck */
+  rect(deck, '', cx - 32, cy - 20, 64, 40,
+       'background:#e6e0f2;border-radius:4px;' +
+       'box-shadow:inset 0 0 0 2px rgba(143,107,179,.42)');
 
-  var PS = 138, PH = 80;
-  var slant = Math.sqrt(PH * PH + (PS / 2) * (PS / 2));
-  var tilt  = Math.atan2(PH, PS / 2) * 180 / Math.PI;
-  var p = el('pyr', 'left:' + (cx - PS / 2) + 'px;top:' + (cy - PS / 2) + 'px;width:' + PS +
-                    'px;height:' + PS + 'px;transform:translateZ(' + MALL_H + 'px)', gMall);
-  for (var i = 0; i < 4; i++) {
-    var arm = el('arm', 'transform:rotateZ(' + (i * 90) + 'deg)', p);
-    el('face', '--slant:' + slant.toFixed(1) + 'px;--tilt:' + tilt.toFixed(1) + 'deg', arm);
-  }
-
-  /* v4: the octagon is the MERCHANDISE hall. The "The Great Hall" label is
-     gone — the octagon is labelled by what happens in it — and the merchStall
-     prop now sits on the octagon footprint, south of centre so the anchor
-     label above it never lands on the counter. */
   var stall = prop('merchStall');
-  if (stall) stall(gMall, cx, cy + 23, 0);
- else {
-    box(gMall, cx - 28, cy + 26, 56, 10, 14, '--faceT:#d8cfee;--faceA:#c6bbe0;--faceB:#cec4e6');
-    box(gMall, cx - 28, cy +  8, 56,  6, 34, '--faceT:#cfc3ea;--faceA:#bdb0d8;--faceB:#c5b9e0');
+  if (stall) stall(deck, cx, cy + 3, 0);
+  else {
+    box(deck, cx - 28, cy + 6, 56, 10, 14, '--faceT:#d8cfee;--faceA:#c6bbe0;--faceB:#cec4e6');
+    box(deck, cx - 28, cy - 12, 56,  6, 34, '--faceT:#cfc3ea;--faceA:#bdb0d8;--faceB:#c5b9e0');
   }
 
-  label(gMall, cx, cy - 22, 30, 'Official F1 Merchandise', 'anchor');
+  /* the anchor label rides gMall, NOT the deck, so it keeps full label size */
+  label(gMall, cx, cy - 24, UNIT_H + 30, 'Official F1 Merchandise', 'anchor');
 })();
 
 /* ---- 3.10 North Galleria ------------------------------------------------
@@ -1774,7 +1944,9 @@ label(zGalleria, 286, 166,  8, '4B · Diecast', 'sm det');
 
 /* ---- 3.11 LIFT LOBBY A on Level 1 — the level link ----------------------- */
 var liftL1 = (function () {
-  rect(gLiftL1, 'liftring', LOBBY.x - 21, LOBBY.y - 19, LOBBY.w + 42, LOBBY.h + 38, '');
+  /* v14: ring padding scales with the block (21/19 -> 12/10) so a 36 x 34 core
+     is not sitting inside a halo twice its own size */
+  rect(gLiftL1, 'liftring', LOBBY.x - 12, LOBBY.y - 10, LOBBY.w + 24, LOBBY.h + 20, '');
   var b = box(gLiftL1, LOBBY.x, LOBBY.y, LOBBY.w, LOBBY.h, LOBBY.z,
               '--faceT:#dae3f2;--faceA:#c3cee0;--faceB:#ccd6e6');
   b.classList.add('liftlink');
@@ -1804,8 +1976,11 @@ var liftL1 = (function () {
   var pat = svgNS('pattern', { id: 'mwGrid', width: 46, height: 92,
                                patternUnits: 'userSpaceOnUse' },
                   svgNS('defs', {}, g));
-  svgNS('rect', { x: 0, y: 0, width: 1,  height: 92, fill: 'rgba(140,148,156,.20)' }, pat);
-  svgNS('rect', { x: 0, y: 0, width: 46, height: 1,  fill: 'rgba(140,148,156,.14)' }, pat);
+  /* v14 (client: "B1 is super messy"): the bay grid is dropped to a whisper —
+     .20/.14 -> .06/.045 — so it still hints "car park" under the activations
+     instead of ruling a 46px lattice across everything on the level. */
+  svgNS('rect', { x: 0, y: 0, width: 1,  height: 92, fill: 'rgba(140,148,156,.060)' }, pat);
+  svgNS('rect', { x: 0, y: 0, width: 46, height: 1,  fill: 'rgba(140,148,156,.045)' }, pat);
   stampUnits(g);
 })();
 label(gB1ctx, 980, 292, 6, 'B1 Car Park', 'sm det');
@@ -1816,16 +1991,31 @@ label(gB1ctx, 980, 292, 6, 'B1 Car Park', 'sm det');
     else box(gB1ctx, x - 5, y - 5, 10, 10, 40,
              '--faceT:#9aa1a8;--faceA:#828a91;--faceB:#8d949b');
   }
-  /* v13: these coordinates were laid out for the old rectangular slab, so
-     every one is now tested against the real silhouette's bbox arms (within
-     40px of a unit bounding box = under the building, including its
-     corridors). The six that stand out on open ground are PRUNED, leaving
-     (428,645) (248,800) (720,420) (960,420) (1180,420) (960,760).          */
-  var inside  = [[248,458],[428,458],[248,645],[428,645],[248,800],[428,800]];
-  var outside = [[720,420],[960,420],[1180,420],[720,760],[960,760],[1180,760]];
-  inside.concat(outside)
-    .filter(function (p) { return inFootprint(p[0], p[1], 40); })
-    .forEach(function (p) { put(p[0], p[1]); });
+  /* v14 (client: "B1 is super messy"). The old set was twelve hand-placed
+     posts laid out for the retired rectangular slab and only bbox-filtered,
+     which left columns standing INSIDE the Dorifto L and the Car Display pad.
+     It is replaced by ONE declared regular lattice — 180px columns, 480px
+     rows — passed through two filters:
+       a  inFootprint(...,30): the post must stand under the building
+       b  not within 18px of either zone container: no post inside an
+          activation, ever
+     Everything else is dropped. That leaves FIVE posts, all on the same
+     grid: (340,280) (520,280) (700,280) (1060,280) (1060,760) — a sparse,
+     honest structural rhythm instead of a scatter.                         */
+  var LATTICE = [];
+  [340, 520, 700, 880, 1060, 1240].forEach(function (x) {
+    [280, 760].forEach(function (y) { LATTICE.push([x, y]); });
+  });
+  var ZBOX = [[885, 317.5, 1355, 682.5],      /* zDrift   */
+              [572.5, 352.5, 927.5, 567.5]];  /* zDisplay */
+  function inZone(x, y) {
+    return ZBOX.some(function (r) {
+      return x >= r[0] - 18 && x <= r[2] + 18 && y >= r[1] - 18 && y <= r[3] + 18;
+    });
+  }
+  LATTICE.filter(function (p) {
+    return inFootprint(p[0], p[1], 30) && !inZone(p[0], p[1]);
+  }).forEach(function (p) { put(p[0], p[1]); });
 })();
 
 /* ---- 3.13 DORIFTO ZONE (zone) ------------------------------------------
@@ -1837,6 +2027,19 @@ label(gB1ctx, 980, 292, 6, 'B1 Car Park', 'sm det');
 zDrift.style.setProperty('--accent', '#efa227');
 rect(zDrift, 'driftfloor', 0,   0, 470, 150, 'transform:translateZ(2px)');
 rect(zDrift, 'driftfloor', 0, 150, 150, 215, 'transform:translateZ(2px)');
+/* v14: one continuous L-shaped outline over the two fill rects, so the zone
+   reads as a DEFINED FLOOR PAD against the basement slab instead of as two
+   abutting grey patches. Drawn as a single polygon precisely so the shared
+   edge at y 150 does not show as an internal seam. */
+(function () {
+  var s = svgNS('svg', { width: 470, height: 365, viewBox: '0 0 470 365',
+    style: 'position:absolute;left:0;top:0;transform:translateZ(2.4px)',
+    'class': 'flat' }, zDrift);
+  s.style.background = 'none';
+  svgNS('polygon', { points: '0,0 470,0 470,150 150,150 150,365 0,365',
+    fill: 'none', stroke: 'rgba(112,120,128,.34)', 'stroke-width': 1.5,
+    'stroke-linejoin': 'round' }, s);
+})();
 
 /* ---- THE COURSE ---------------------------------------------------------
    Read it in travel order from the crossing point X (220,75):
@@ -1967,6 +2170,10 @@ label(zDrift, 200, -34, 10, 'Dorifto Zone');
    it reads as open clear car-park floor rather than as an empty activation
    area with a glow round it.                                                */
 zDisplay.style.setProperty('--accent', '#34a06a');
+/* v14: an explicit floor pad under the whole zone. The display previously sat
+   straight on the basement slab with only the six car pads and the lounge mat
+   to define it, which is a large part of why B1 read as clutter. */
+rect(zDisplay, 'b1pad', 0, 0, 355, 215, 'transform:translateZ(1.8px)');
 el('zglow', 'left:-14px;top:-14px;right:-14px;bottom:-14px', zDisplay);
 label(zDisplay, 175, 228, 10, 'Car Display & Lounge');
 
@@ -2039,8 +2246,8 @@ var liftB1 = (function () {
   /* v11: B1 lobby sits closer to its nearest pillar (the x~720 column),
      tucked slightly behind it — B1-only offset, L1 lobby unmoved */
   var BX = LOBBY.x - 62, BY = LOBBY.y - 26;
-  rect(gLiftB1, 'liftring', BX - 21, BY - 19, LOBBY.w + 42, LOBBY.h + 38, '');
-  var b = box(gLiftB1, BX, BY, LOBBY.w, LOBBY.h, 32,
+  rect(gLiftB1, 'liftring', BX - 12, BY - 10, LOBBY.w + 24, LOBBY.h + 20, '');
+  var b = box(gLiftB1, BX, BY, LOBBY.w, LOBBY.h, 26,       /* v14: 32 -> 26 */
               '--faceT:#dae3f2;--faceA:#c3cee0;--faceB:#ccd6e6');
   b.classList.add('liftlink');
   b.setAttribute('role', 'button');
@@ -2560,12 +2767,12 @@ function showShaft() {
     shaft = el('shaft', 'position:absolute;left:0;top:0;width:0;height:0;' +
                         'transform-style:preserve-3d', gLink);
     var cx = LOBBY.x + LOBBY.w / 2, cy = LOBBY.y + LOBBY.h / 2;
-    /* core + halo scaled with the v4 80% lobby block so the shaft still lands
-       inside the smaller footprint */
-    box(shaft, cx - 14, cy - 14, 28, 28, 238,
+    /* core + halo scaled with the lobby block so the shaft still lands inside
+       the smaller footprint (v14: 28/54 -> 16/32 for the 36 x 34 core) */
+    box(shaft, cx - 8, cy - 8, 16, 16, 238,
         'transform:translateZ(-106px);--faceT:rgba(96,150,235,.55);' +
         '--faceA:rgba(96,150,235,.30);--faceB:rgba(96,150,235,.42)');
-    box(shaft, cx - 27, cy - 27, 54, 54, 232,
+    box(shaft, cx - 16, cy - 16, 32, 32, 232,
         'transform:translateZ(-103px);--faceT:rgba(96,150,235,.13);' +
         '--faceA:rgba(96,150,235,.08);--faceB:rgba(96,150,235,.11)');
   }
