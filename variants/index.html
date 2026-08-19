@@ -195,14 +195,29 @@ body.variant-c .mwTop polygon.edge {
    the billboarding is angle-independent and holds at any rx, including the
    near-top-down bird's eye preset and a fully dragged rz.
    --crzx is the extra counter-spin a ROTATED SUB-PLAN container hands down to
-   its own labels (a `grp` of spin -32deg sets --crzx:32deg).                */
+   its own labels (a `grp` of spin -32deg sets --crzx:32deg).
+   --zk is the v15 one-scale factor a SHRUNK ACTIVATION ZONE hands down to its
+   own labels (see the #zSquare/#zGalleria/#zDrift/#zDisplay rule). The zone
+   renders at .55, so its labels divide their billboard scale by that same .55
+   and come out at exactly their old ON-SCREEN size: text legibility is
+   independent of the geometry rescale. It is COMPOSED into the existing
+   scale() — the billboard counter-rotations are untouched — and it defaults to
+   1, so a label outside a zone is unaffected and can never double-compensate.
+   WHY THE COUNTER-SCALE LIVES ON .lbl AND NOT ON .lbl > span: .lbl is a 0x0
+   box sitting exactly on the anchor point, so scaling it scales the pill about
+   that anchor (which is what the --cs zoom compensation already does), and the
+   span's own translate(-50%,-50%) keeps the pill centred. Declaring it on the
+   span instead would be silently DEAD for .lbl.pin > span, whose transform is
+   driven by the `pinbob` animation and therefore overrides anything the span
+   declares. On the parent, plain / .sm / .det / .anchor / .u / .badge / .pin
+   are all covered by the one rule.                                          */
 .lbl {
   position: absolute; left: 0; top: 0; width: 0; height: 0;
   transform-style: preserve-3d;
   transform: translateZ(var(--lz, 4px))
              rotateZ(calc(var(--crz, 38deg) + var(--crzx, 0deg)))
              rotateX(var(--crx, -58deg))
-             scale(calc(1 / var(--cs, .6)));
+             scale(calc(1 / var(--cs, .6) / var(--zk, 1)));
   pointer-events: none;
 }
 .lbl > span {
@@ -379,6 +394,42 @@ body.variant-b .lbl.tenant > span { font-size: 8px; letter-spacing: .07em;
 
 /* ========================= ZONE SELECTION GLOW =========================== */
 .zone { position: absolute; transform-style: preserve-3d; }
+
+/* ==========================================================================
+   v15  ONE-SCALE PASS  —  the activations come down to the skeleton's scale
+   --------------------------------------------------------------------------
+   The four activation zones were authored on the OLD stylised plan at roughly
+   10 px per metre. The surveyed Millenia Walk skeleton they now stand on
+   measures ~5.5 px/m, so every zone was rendering about 1.8x too big against
+   the shops around it — one map, two scales. The client wants ONE.
+
+   Each container is scaled to 0.55 ABOUT ITS OWN CENTRE. Nothing is re-seated
+   and nothing is re-authored: the inline left/top/width/height stay exactly as
+   surveyed, every child keeps its local coordinates, and because the origin is
+   the container's own centre the seated centre point does not move by a pixel.
+   Neither container carried a transform before this rule, so there is nothing
+   to compound with.
+
+   scale3d and NOT scale(): a 2D scale would squash the plan while leaving every
+   translateZ at full height, and the massing would read as a scale model with
+   skyscrapers on it. Scaling Z by the same .55 (origin z 0 = the level's own
+   floor plane) keeps the extrusions in proportion. #gB1's own translateZ(-95px)
+   sits on the PARENT, so the basement stays where it is.
+
+   --zk carries the same number down to the labels. See the .lbl rule: a label
+   inside a zone divides its billboard scale by --zk and so keeps its old
+   on-screen size, while the geometry around it shrinks. Anything outside a
+   zone never sees --zk (fallback 1) so it cannot double-compensate.
+
+   NOT RESCALED, deliberately — already hand-fit to the skeleton: SG 1 / SG 2
+   kiosk pads, reception, the South Entrance assembly, Lift Lobby A, the B1
+   pillar lattice, the escalator props and the anchor badges.
+   ========================================================================== */
+#zSquare, #zGalleria, #zDrift, #zDisplay {
+  --zk: .55;
+  transform-origin: 50% 50%;
+  transform: scale3d(.55, .55, .55);
+}
 .zglow { position: absolute; left: -14px; top: -14px; right: -14px; bottom: -14px;
          border: 1.5px solid var(--accent); border-radius: 8px;
          box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent),
@@ -957,6 +1008,17 @@ var MW_LM = {
      screenX = ( dx*cos(rz) - dy*sin(rz) )
      screenY = ( dx*sin(rz) + dy*cos(rz) )*cos(rx) - dz*sin(rx)
      tx = -scale * screenX ,  ty = -scale * screenY
+
+   v15 ONE-SCALE REZOOM: the four zone containers now render at 0.55 (see the
+   #zSquare/#zGalleria/#zDrift/#zDisplay rule), so every zone row zooms back in
+   by ~1/0.55 to hold its subject at the on-screen size it had before, CLAMPED
+   at 2.20 so no pose outruns its own level's floor. Because only `scale` moved
+   and tx/ty are linear in it, each row is re-derived by the DELTA method —
+   formula(new scale) minus formula(old scale), added to the value already
+   stored — which changes the projection term and leaves each row's own
+   hand-tuned framing bias (galleria carries +50.3 / -8.1 px of it) intact.
+   `overview` and the two lobby rows are NOT rezoomed: neither the whole-site
+   frame nor Lift Lobby A was rescaled.
    ========================================================================== */
 var KEYFRAMES = [
   { id:'overview', key:'1', accent:'#8b9298',
@@ -997,8 +1059,18 @@ var KEYFRAMES = [
     /* v14 RE-SEAT (delta method). The plaza drops into the ground the deleted
        dining arm freed, fronting Raffles Boulevard.
        focus (640,670) -> (500,620), dz +14, scale / rz / rx unchanged:
-         tx -32 -> 122 , ty -120 -> -136 */
-    tx: 122, ty: -136, scale: 1.05, rz: -30, rx: 54, xray:false, zone:'zSquare' },
+         tx -32 -> 122 , ty -120 -> -136
+       v15 ONE-SCALE REZOOM (delta method). The zone itself now renders at 0.55,
+       so the pose has to zoom back in by ~1/0.55 to land Monument Square on
+       screen at the size it had before: scale 1.05 -> 1.90 (1.8x).
+       Same focus (500,620), same dz +14, same rz / rx — only `scale` moves, and
+       tx/ty scale linearly with it, so
+         d(tx) = -(1.90 - 1.05) * screenX = -0.85 * -115.526 = +98.20
+         d(ty) = -(1.90 - 1.05) * screenY = -0.85 * +129.686 = -110.23
+       applied to the EXISTING values, which carries this row's own +0.7/+0.2 px
+       bias through untouched:
+         tx 122 -> 220 , ty -136 -> -246 */
+    tx: 220, ty: -246, scale: 1.90, rz: -30, rx: 54, xray:false, zone:'zSquare' },
 
   { id:'galleria', key:'3', accent:'#3f7fd6',
     name:'South Galleria 4A + 4B',
@@ -1011,8 +1083,18 @@ var KEYFRAMES = [
     /* v14 RE-SEAT (delta method). The pair turns from an E-W row into a N-S
        stack — 4B north, 4A south — standing in the forecourt Harvey vacated.
        focus (980,848) -> (1290,665), dz +34, scale / rz / rx unchanged:
-         tx -497 -> -693 , ty -66 -> 111 */
-    tx: -642, ty: 103, scale: 1.18, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
+         tx -497 -> -693 , ty -66 -> 111
+       v15 ONE-SCALE REZOOM (delta method). scale 1.18 -> 2.10 — 1.78x, one
+       notch under the flat 1.8 because 2.10 is where this pose stops pushing
+       the north half of 4B off a 390px portrait screen.
+       Same focus (1290,665), same dz +34, same rz / rx:
+         d(tx) = -(2.10 - 1.18) * screenX = -0.92 * +586.722 = -539.78
+         d(ty) = -(2.10 - 1.18) * screenY = -0.92 * -94.190  =  +86.65
+       NOTE this row's stored tx/ty are NOT the raw formula output — they carry
+       a deliberate +50.3 / -8.1 px framing bias off it. The delta method adds
+       only the change, so that bias survives exactly:
+         tx -642 -> -1182 , ty 103 -> 190 */
+    tx: -1182, ty: 190, scale: 2.10, rz: -32, rx: 62, xray:false, zone:'zGalleria' },
 
   { id:'drift', key:'4', accent:'#efa227',
     name:'B1 — Dorifto Drift Karts',
@@ -1025,8 +1107,13 @@ var KEYFRAMES = [
     /* v13 RE-SEAT. focus (1070,449.5) dz -92 — still the L's CENTROID, not
        the container centre: the container moved (315,482.5) -> (1120,500),
        so the authored centroid focus moved with it by (+805,+17.5).
-       was focus (265,432) -> tx 396, ty -266 */
-    tx: -266, ty:  76, scale: 1.12, rz: -44, rx: 56, xray:true,  zone:'zDrift' },
+       was focus (265,432) -> tx 396, ty -266
+       v15 ONE-SCALE REZOOM (delta method). scale 1.12 -> 2.00 (1.79x).
+       Same focus (1070,449.5), same dz -92, same rz / rx:
+         d(tx) = -(2.00 - 1.12) * screenX = -0.88 * +237.528 = -209.03
+         d(ty) = -(2.00 - 1.12) * screenY = -0.88 * -67.931  =  +59.78
+         tx -266 -> -475 , ty 76 -> 136 */
+    tx: -475, ty: 136, scale: 2.00, rz: -44, rx: 56, xray:true,  zone:'zDrift' },
 
   { id:'display', key:'5', accent:'#34a06a',
     name:'B1 — Car Display & Lounge',
@@ -1038,8 +1125,15 @@ var KEYFRAMES = [
              'Chill and wait here between Dorifto kart heats'],
     /* v13 RE-SEAT. focus (749.5,463.5) dz -92 — centre of the consolidated
        pads + lounge, carried by the container's (+487.5,-232.5) move.
-       was focus (262,696) -> tx 319, ty -380 */
-    tx:  -26, ty: -87, scale: 1.26, rz: -34, rx: 60, xray:true,  zone:'zDisplay' }
+       was focus (262,696) -> tx 319, ty -380
+       v15 ONE-SCALE REZOOM (delta method). scale 1.26 -> 2.20 — the CLAMP.
+       A flat 1.8x would ask for 2.27; 2.20 is the ceiling this pass holds so no
+       pose zooms past the point where the basement slab stops filling frame.
+       Same focus (749.5,463.5), same dz -92, same rz / rx:
+         d(tx) = -(2.20 - 1.26) * screenX = -0.94 * +20.822 = -19.57
+         d(ty) = -(2.20 - 1.26) * screenY = -0.94 * +68.732 = -64.61
+         tx -26 -> -46 , ty -87 -> -152 */
+    tx:  -46, ty: -152, scale: 2.20, rz: -34, rx: 60, xray:true,  zone:'zDisplay' }
 ];
 
 /* INTERNAL rows — reachable only through the Lift Lobby A level link.
@@ -1916,8 +2010,18 @@ var r4A = el('', 'position:absolute;left:0;top:168px;width:220px;height:152px;' 
      on unit 27's own floor. The deck also lifts the pair to the unit top
      (UNIT_H 26, +0.5 to clear the top face) so it reads as a pop-up dropped
      into a vacant shop, not as a second building on the plaza. scale() is 2D,
-     so the counter and back wall keep their full height. */
-  var K = 0.60;
+     so the counter and back wall keep their full height.
+
+     v15 ONE-SCALE PASS: the merch pad + stall is an ACTIVATION, authored at the
+     same ~10 px/m as the four zones, so it takes the same 0.55 the zones take.
+     It already rides a scaled deck, so the factor is COMPOSED onto the existing
+     deck scale rather than replacing it — 0.60 * 0.55 = 0.33 — about the SAME
+     unit centre (588,374), which is already this deck's transform-origin, so
+     the assembly shrinks in place and the anchor label (which rides gMall, not
+     the deck) keeps its full size. */
+  var K = 0.60;    /* v15r2: kept at 0.60 — the deck was already fit to unit
+                      27's real-scale polygon (~6px/m); composing 0.55 onto it
+                      would double-shrink the merch below skeleton scale */
   var deck = el('', 'position:absolute;left:0;top:0;width:100%;height:100%;' +
                     'transform-style:preserve-3d;transform-origin:' + cx + 'px ' + cy + 'px;' +
                     'transform:translateZ(' + (UNIT_H + 0.5) + 'px) scale(' + K + ')', gMall);
@@ -2138,6 +2242,14 @@ var DRIFT_PATH =
     }
     return chosen;
   })();
+  /* v15 ONE-SCALE PASS — the six karts are NOT separately rescaled, on purpose.
+     They and their trails are children of zDrift, which the v15 rule scales to
+     0.55 about its own centre, so the 32 x 17 body already renders at ~17.6 x
+     9.4 and the offset-path (DRIFT_PATH) shrinks with it — kart, trail and
+     course stay in proportion and the collision-free PHASES solver above, which
+     samples the path in LOCAL units, is untouched. Halving the size variables
+     here as well would compound to 0.55 x 0.55 = 0.30 and put toy karts on a
+     full-size course. */
   for (var k = 0; k < 6; k++) {
     var set   = el('kartset', 'transform:translateZ(6px)', zDrift);
     var phase = PHASES[k] * KART_DUR;
@@ -2399,7 +2511,7 @@ function frame(now) {
   }
   if (Math.abs(cur.scale - lastCS) > 0.002) {
     world.style.setProperty('--cs', cur.scale.toFixed(4));
-    document.body.classList.toggle('z-near', cur.scale > 0.62);
+    document.body.classList.toggle('z-near', cur.scale > 1.05);
     document.body.classList.toggle('z-far', cur.scale < 0.40);
     lastCS = cur.scale;
   }
